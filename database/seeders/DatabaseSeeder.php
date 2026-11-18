@@ -3,12 +3,14 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
+use App\Models\BranchInventory;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Models\Supplier;
 use App\Models\Unit;
 use App\Models\User;
+use App\Support\BranchContext;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -24,7 +26,7 @@ class DatabaseSeeder extends Seeder
             ['email' => 'admin@supershop.test'],
             ['name' => 'Store Owner', 'password' => Hash::make('password'), 'phone' => '0170000001', 'is_active' => true]
         );
-        $admin->syncRoles('Admin');
+        $admin->syncRoles('Super Admin');
 
         $manager = User::updateOrCreate(
             ['email' => 'manager@supershop.test'],
@@ -94,7 +96,7 @@ class DatabaseSeeder extends Seeder
 
         $sku = 1000;
         foreach ($products as [$name, $cat, $unit, $cost, $price, $tax, $stock, $barcode]) {
-            Product::firstOrCreate(
+            $product = Product::firstOrCreate(
                 ['barcode' => $barcode],
                 [
                     'name' => $name,
@@ -105,10 +107,12 @@ class DatabaseSeeder extends Seeder
                     'cost_price' => $cost,
                     'sale_price' => $price,
                     'tax_rate' => $tax,
-                    'stock_quantity' => $stock,
-                    'alert_quantity' => 10,
                     'is_active' => true,
                 ]
+            );
+            BranchInventory::firstOrCreate(
+                ['branch_id' => BranchContext::id(), 'product_id' => $product->id],
+                ['stock_quantity' => $stock, 'alert_quantity' => 10]
             );
         }
 

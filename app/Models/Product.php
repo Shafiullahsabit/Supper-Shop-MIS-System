@@ -6,12 +6,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Support\BranchContext;
 
 class Product extends Model
 {
     protected $fillable = [
         'name', 'sku', 'barcode', 'category_id', 'unit_id', 'supplier_id',
-        'cost_price', 'sale_price', 'tax_rate', 'stock_quantity', 'alert_quantity',
+        'cost_price', 'sale_price', 'tax_rate',
         'image', 'description', 'is_active',
     ];
 
@@ -19,8 +21,6 @@ class Product extends Model
         'cost_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
         'tax_rate' => 'decimal:2',
-        'stock_quantity' => 'decimal:3',
-        'alert_quantity' => 'decimal:3',
         'is_active' => 'boolean',
     ];
 
@@ -46,6 +46,17 @@ class Product extends Model
         return $this->hasMany(SaleItem::class);
     }
 
+    public function currentInventory(): HasOne
+    {
+        return $this->hasOne(BranchInventory::class)
+            ->where('branch_id', BranchContext::id() ?? 0);
+    }
+
+    public function scopeWithCurrentInventory(Builder $query): Builder
+    {
+        return $query->with('currentInventory');
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
@@ -53,7 +64,25 @@ class Product extends Model
 
     public function scopeLowStock(Builder $query): Builder
     {
-        return $query->whereColumn('stock_quantity', '<=', 'alert_quantity');
+        return $query->whereHas('currentInventory', fn ($inventory) => $inventory
+            ->whereColumn('stock_quantity', '<=', 'alert_quantity'));
+    }
+
+    public function scopeOutOfStock(Builder $query): Builder
+    {
+        return $query->whereHas('currentInventory', fn ($inventory) => $inventory->where('stock_quantity', '<=', 0));
+    }
+
+    public function scopeOrderByStock(Builder $query, string $direction = 'asc'): Builder
+    {
+        return $query->orderBy(
+            BranchInventory::query()
+                ->select('stock_quantity')
+                ->whereColumn('branch_inventories.product_id', 'products.id')
+                ->where('branch_id', BranchContext::id() ?? 0)
+                ->limit(1),
+            $direction
+        );
     }
 
     public function scopeSearch(Builder $query, ?string $term): Builder
@@ -76,6 +105,24 @@ class Product extends Model
         }
 
         return $this->stock_quantity <= $this->alert_quantity ? 'low' : 'in';
+    }
+
+    public function getStockQuantityAttribute(): float
+    {
+        if ($this->relationLoaded('currentInventory')) {
+            return (float) ($this->getRelation('currentInventory')?->stock_quantity ?? 0);
+        }
+
+        return (float) ($this->currentInventory()->value('stock_quantity') ?? 0);
+    }
+
+    public function getAlertQuantityAttribute(): float
+    {
+        if ($this->relationLoaded('currentInventory')) {
+            return (float) ($this->getRelation('currentInventory')?->alert_quantity ?? 5);
+        }
+
+        return (float) ($this->currentInventory()->value('alert_quantity') ?? 5);
     }
 
     public function getProfitMarginAttribute(): float

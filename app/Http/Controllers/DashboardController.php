@@ -30,7 +30,7 @@ class DashboardController extends Controller
         })->sum(DB::raw('(price - cost) * quantity - discount'));
 
         $productCount = Product::where('is_active', true)->count();
-        $lowStock = Product::active()->lowStock()->with('unit')->orderBy('stock_quantity')->take(8)->get();
+        $lowStock = Product::active()->lowStock()->withCurrentInventory()->with('unit')->orderByStock()->take(8)->get();
         $lowStockCount = Product::active()->lowStock()->count();
 
         // Last 7 days revenue trend

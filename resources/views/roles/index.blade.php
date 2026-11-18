@@ -17,15 +17,19 @@
                 <div class="ico ico-violet" style="position:static;width:40px;height:40px">@include('partials.icon',['name'=>'shield'])</div>
                 <div><h3>{{ $role->name }}</h3><div class="sub">{{ $role->users_count }} {{ __($role->users_count === 1 ? 'user' : 'users') }} · {{ $role->permissions->count() }} {{ __('permissions') }}</div></div>
                 <div style="margin-inline-start:auto" class="flex gap-2">
-                    @if(!in_array($role->name,['Admin','Manager','Cashier']))
+                    @if(!in_array($role->name,['Admin','Manager','Cashier','Super Admin']))
                         <button type="button" class="icon-btn danger" data-confirm="{{ __('Delete role :name?', ['name' => $role->name]) }}" onclick="return SS.confirmSubmit(document.getElementById('delRole{{ $role->id }}'), this.dataset.confirm)">@include('partials.icon',['name'=>'trash'])</button>
                     @endif
-                    <button class="btn btn-primary btn-sm">@include('partials.icon',['name'=>'check']) {{ __('Save') }}</button>
+                    @if($role->name !== 'Super Admin')
+                        <button class="btn btn-primary btn-sm">@include('partials.icon',['name'=>'check']) {{ __('Save') }}</button>
+                    @endif
                 </div>
             </div>
             <div class="card-pad">
-                @if($role->name==='Admin')
-                    <div class="alert alert-info" style="margin:0">@include('partials.icon',['name'=>'shield']) {{ __('The Admin role always has full access to every module.') }}</div>
+                @if($role->name==='Super Admin')
+                    <div class="alert alert-info" style="margin:0">@include('partials.icon',['name'=>'shield']) {{ __('Super Admin has global access across all branches and cannot be changed here.') }}</div>
+                @elseif($role->name==='Admin')
+                    <div class="alert alert-info" style="margin:0">@include('partials.icon',['name'=>'shield']) {{ __('Admin has full module access within the assigned branch.') }}</div>
                 @else
                 <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px">
                     @foreach($permissions as $group => $perms)
@@ -44,7 +48,7 @@
                 @endif
             </div>
         </form>
-        @if(!in_array($role->name,['Admin','Manager','Cashier']))
+        @if(!in_array($role->name,['Admin','Manager','Cashier','Super Admin']))
         <form method="POST" action="{{ route('roles.destroy',$role) }}" id="delRole{{ $role->id }}">@csrf @method('DELETE')</form>
         @endif
     </div>

@@ -10,7 +10,7 @@ class ActivityLogController extends Controller
 {
     public function index(Request $request): View
     {
-        $logs = ActivityLog::with('user')
+        $logs = ActivityLog::with('user', 'branch')
             ->when($request->filled('action'), fn ($q) => $q->where('action', $request->action))
             ->when($request->filled('q'), fn ($q) => $q->where('description', 'like', '%'.$request->q.'%'))
             ->latest()->paginate(30)->withQueryString();

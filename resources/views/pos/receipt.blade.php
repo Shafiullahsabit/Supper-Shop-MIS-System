@@ -42,6 +42,7 @@
         </div>
         <hr class="divider">
         <div class="row"><span>{{ __('Invoice') }}</span><span><b>{{ $sale->invoice_no }}</b></span></div>
+        <div class="row"><span>{{ __('Branch') }}</span><span>{{ $sale->branch?->branch_number }} · {{ $sale->branch?->name }}</span></div>
         <div class="row"><span>{{ __('Date') }}</span><span>{{ $sale->created_at->translatedFormat('d M Y, h:i A') }}</span></div>
         <div class="row"><span>{{ __('Cashier') }}</span><span>{{ $sale->cashier->name ?? '—' }}</span></div>
         <div class="row"><span>{{ __('Customer') }}</span><span>{{ $sale->customer->name ?? __('Walk-in') }}</span></div>

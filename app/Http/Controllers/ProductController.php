@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\Branch;
+use App\Models\BranchInventory;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Supplier;
@@ -10,17 +12,19 @@ use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use App\Support\BranchContext;
 use Illuminate\View\View;
 
 class ProductController extends Controller
 {
     public function index(Request $request): View
     {
-        $products = Product::with('category', 'unit')
+        $products = Product::withCurrentInventory()->with('category', 'unit')
             ->search($request->query('q'))
             ->when($request->filled('category'), fn ($q) => $q->where('category_id', $request->query('category')))
             ->when($request->query('stock') === 'low', fn ($q) => $q->lowStock())
-            ->when($request->query('stock') === 'out', fn ($q) => $q->where('stock_quantity', '<=', 0))
+            ->when($request->query('stock') === 'out', fn ($q) => $q->outOfStock())
             ->orderBy('name')
             ->paginate(15)
             ->withQueryString();
@@ -40,8 +44,29 @@ class ProductController extends Controller
         $data = $this->validateData($request);
         $data['image'] = $this->handleImage($request);
         $data['sku'] = ($data['sku'] ?? null) ?: $this->generateSku();
+        $stock = (float) $data['stock_quantity'];
+        $alert = (float) ($data['alert_quantity'] ?? 5);
+        unset($data['stock_quantity'], $data['alert_quantity']);
 
-        $product = Product::create($data);
+        $product = DB::transaction(function () use ($data, $stock, $alert) {
+            $product = Product::create($data);
+            $now = now();
+            $currentBranchId = BranchContext::id();
+            $rows = Branch::query()->pluck('id')->map(fn ($branchId) => [
+                'branch_id' => $branchId,
+                'product_id' => $product->id,
+                'stock_quantity' => (int) $branchId === $currentBranchId ? $stock : 0,
+                'alert_quantity' => (int) $branchId === $currentBranchId ? $alert : 5,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->all();
+
+            if ($rows) {
+                BranchInventory::insert($rows);
+            }
+
+            return $product;
+        });
         ActivityLog::record('created', "Created product {$product->name}", $product);
 
         return redirect()->route('products.index')->with('success', __('Product created successfully.'));
@@ -58,8 +83,17 @@ class ProductController extends Controller
         if ($image = $this->handleImage($request)) {
             $data['image'] = $image;
         }
+        $stock = (float) $data['stock_quantity'];
+        $alert = (float) ($data['alert_quantity'] ?? 5);
+        unset($data['stock_quantity'], $data['alert_quantity']);
 
-        $product->update($data);
+        DB::transaction(function () use ($data, $product, $stock, $alert): void {
+            $product->update($data);
+            BranchInventory::updateOrCreate(
+                ['branch_id' => BranchContext::id(), 'product_id' => $product->id],
+                ['stock_quantity' => $stock, 'alert_quantity' => $alert]
+            );
+        });
         ActivityLog::record('updated', "Updated product {$product->name}", $product);
 
         return redirect()->route('products.index')->with('success', __('Product updated successfully.'));

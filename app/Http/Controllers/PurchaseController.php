@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\BranchInventory;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Supplier;
@@ -16,7 +17,7 @@ class PurchaseController extends Controller
 {
     public function index(Request $request): View
     {
-        $purchases = Purchase::with('supplier', 'user')
+        $purchases = Purchase::with('supplier', 'user', 'branch')
             ->when($request->filled('q'), fn ($q) => $q->where('reference', 'like', '%'.$request->q.'%'))
             ->latest()->paginate(15)->withQueryString();
 
@@ -27,7 +28,8 @@ class PurchaseController extends Controller
     {
         return view('purchases.create', [
             'suppliers' => Supplier::where('is_active', true)->orderBy('name')->get(),
-            'products' => Product::active()->orderBy('name')->get(['id', 'name', 'sku', 'barcode', 'cost_price', 'stock_quantity']),
+            'products' => Product::active()->withCurrentInventory()
+                ->orderBy('name')->get(['id', 'name', 'sku', 'barcode', 'cost_price']),
         ]);
     }
 
@@ -79,7 +81,10 @@ class PurchaseController extends Controller
                 // Received purchases add stock and update cost price
                 if ($data['status'] === 'received') {
                     $product = Product::find($item['product_id']);
-                    $product->increment('stock_quantity', $item['quantity']);
+                    BranchInventory::where('branch_id', $purchase->branch_id)
+                        ->where('product_id', $product->id)
+                        ->lockForUpdate()->firstOrFail()
+                        ->increment('stock_quantity', $item['quantity']);
                     $product->update(['cost_price' => $item['cost']]);
                 }
             }
@@ -94,7 +99,7 @@ class PurchaseController extends Controller
 
     public function show(Purchase $purchase): View
     {
-        $purchase->load('items.product', 'supplier', 'user');
+        $purchase->load('items.product', 'supplier', 'user', 'branch');
 
         return view('purchases.show', compact('purchase'));
     }
@@ -104,7 +109,12 @@ class PurchaseController extends Controller
         DB::transaction(function () use ($purchase) {
             if ($purchase->status === 'received') {
                 foreach ($purchase->items as $item) {
-                    $item->product?->decrement('stock_quantity', $item->quantity);
+                    if ($item->product_id) {
+                        BranchInventory::where('branch_id', $purchase->branch_id)
+                            ->where('product_id', $item->product_id)
+                            ->lockForUpdate()->firstOrFail()
+                            ->decrement('stock_quantity', $item->quantity);
+                    }
                 }
             }
             $purchase->delete();

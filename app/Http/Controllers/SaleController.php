@@ -13,7 +13,7 @@ class SaleController extends Controller
 {
     public function index(Request $request): View
     {
-        $sales = Sale::with('cashier', 'customer')
+        $sales = Sale::with('cashier', 'customer', 'branch')
             ->when($request->filled('q'), fn ($q) => $q->where('invoice_no', 'like', '%'.$request->q.'%'))
             ->when($request->filled('from'), fn ($q) => $q->whereDate('created_at', '>=', $request->from))
             ->when($request->filled('to'), fn ($q) => $q->whereDate('created_at', '<=', $request->to))
@@ -33,7 +33,7 @@ class SaleController extends Controller
 
     public function show(Sale $sale): View
     {
-        $sale->load('items.product', 'customer', 'cashier');
+        $sale->load('items.product', 'customer', 'cashier', 'branch');
 
         return view('sales.show', compact('sale'));
     }

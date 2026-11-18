@@ -38,11 +38,12 @@
     <div class="card-head"><h3>{{ __('Session History') }}</h3></div>
     <div class="table-wrap">
         <table class="data">
-            <thead><tr><th>{{ __('Cashier') }}</th><th>{{ __('Opened') }}</th><th>{{ __('Closed') }}</th><th class="t-right">{{ __('Cash Sales') }}</th><th class="t-right">{{ __('Expected') }}</th><th class="t-right">{{ __('Difference') }}</th><th>{{ __('Status') }}</th><th></th></tr></thead>
+            <thead><tr><th>{{ __('Cashier') }}</th>@if(auth()->user()->hasRole('Super Admin'))<th>{{ __('Branch') }}</th>@endif<th>{{ __('Opened') }}</th><th>{{ __('Closed') }}</th><th class="t-right">{{ __('Cash Sales') }}</th><th class="t-right">{{ __('Expected') }}</th><th class="t-right">{{ __('Difference') }}</th><th>{{ __('Status') }}</th><th></th></tr></thead>
             <tbody>
             @forelse($sessions as $s)
                 <tr onclick="location='{{ route('register.show',$s) }}'" style="cursor:pointer">
                     <td class="t-title">{{ $s->user->name ?? '—' }}</td>
+                    @if(auth()->user()->hasRole('Super Admin'))<td>{{ $s->branch?->branch_number }} · {{ $s->branch?->name }}</td>@endif
                     <td>{{ $s->opened_at?->translatedFormat('d M, h:i A') }}</td>
                     <td>{{ $s->closed_at?->translatedFormat('d M, h:i A') ?? '—' }}</td>
                     <td class="t-right t-mono">{{ money($s->cash_sales) }}</td>
@@ -52,7 +53,7 @@
                     <td onclick="event.stopPropagation()"><a href="{{ route('register.show',$s) }}" class="icon-btn">@include('partials.icon',['name'=>'eye'])</a></td>
                 </tr>
             @empty
-                <tr><td colspan="8"><div class="empty">@include('partials.icon',['name'=>'wallet'])<h4>{{ __('No register sessions yet') }}</h4></div></td></tr>
+                <tr><td colspan="{{ auth()->user()->hasRole('Super Admin') ? 9 : 8 }}"><div class="empty">@include('partials.icon',['name'=>'wallet'])<h4>{{ __('No register sessions yet') }}</h4></div></td></tr>
             @endforelse
             </tbody>
         </table>

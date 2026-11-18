@@ -30,6 +30,7 @@ built-in database backup/restore system.
 - Products with SKU, barcode, cost/sale price, tax rate, category, unit, supplier, images.
 - Categories (color-coded), units (with decimal support for weighed goods), suppliers.
 - Stock tracking with **low-stock alerts**, manual stock adjustments (with full audit history).
+- **Branch-specific inventory** — each location has its own stock and low-stock threshold.
 - **Purchases / stock receiving** — recording a received purchase increases stock and
   updates cost price.
 
@@ -51,7 +52,11 @@ built-in database backup/restore system.
 
 ### Administration
 
-- **Role-based access control** (Admin / Manager / Cashier + custom roles) with a granular
+- **Multi-branch access control** — Super Admin manages branches and sees all locations;
+  Admin, Manager, and Cashier accounts are scoped to one assigned branch.
+- Branch names are stored as entered, branch numbers are unique, and new branches start with
+  zero stock. Existing users, transactions, and product stock are migrated into **Main Branch (001)**.
+- **Role-based access control** (Super Admin / Admin / Manager / Cashier + custom roles) with a granular
   permission matrix — 25+ permissions across every module.
 - User management, activity/audit log, store settings (currency, tax, receipt footer, loyalty).
 - **Database backups** — one-click `mysqldump` backup, download, restore, delete, plus a
@@ -114,11 +119,14 @@ POS_PRINTER_PORT=9100
 
 ## Demo accounts
 
-| Role    | Email                  | Password     | Access                                           |
-| ------- | ---------------------- | ------------ | ------------------------------------------------ |
-| Admin   | admin@supershop.test   | `password` | Everything                                       |
+| Role        | Email                  | Password     | Access                                           |
+| ----------- | ---------------------- | ------------ | ------------------------------------------------ |
+| Super Admin | admin@supershop.test   | `password` | All branches and system administration           |
 | Manager | manager@supershop.test | `password` | Operations, reports (no users/roles/backups)     |
 | Cashier | cashier@supershop.test | `password` | POS, register, view products/customers/own sales |
+
+Change seeded passwords before exposing a deployment to users. Branch staff are assigned
+to one branch in **Users**; Super Admin can select the active branch from the app header.
 
 ---
 

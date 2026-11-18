@@ -53,6 +53,7 @@
         </div>
         <div class="card card-pad">
             <h3 style="margin-bottom:14px">{{ __('Details') }}</h3>
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="text-muted">{{ __('Branch') }}</span><span class="fw-700">{{ $sale->branch?->branch_number }} · {{ $sale->branch?->name }}</span></div>
             <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="text-muted">{{ __('Cashier') }}</span><span class="fw-700">{{ $sale->cashier->name ?? '—' }}</span></div>
             <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="text-muted">{{ __('Customer') }}</span><span class="fw-700">{{ $sale->customer->name ?? __('Walk-in') }}</span></div>
             <div style="display:flex;justify-content:space-between"><span class="text-muted">{{ __('Status') }}</span>

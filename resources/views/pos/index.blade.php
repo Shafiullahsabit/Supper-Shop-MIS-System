@@ -14,6 +14,7 @@
 </head>
 <body class="pos-body">
 @php
+    $currentBranch = \App\Models\Branch::find(\App\Support\BranchContext::id());
     $products = $products->map(fn($p) => [
         'id' => $p->id, 'name' => $p->name, 'sku' => $p->sku, 'barcode' => $p->barcode,
         'price' => (float)$p->sale_price, 'tax_rate' => (float)$p->tax_rate,
@@ -31,7 +32,7 @@
     <!-- Top bar -->
     <div class="pos-top">
         <div class="brand-mark">S</div>
-        <div class="title">{{ setting('shop_name','SuperShop') }} <small>{{ __('POS Terminal') }} · {{ auth()->user()->name }}</small></div>
+        <div class="title">{{ setting('shop_name','SuperShop') }} <small>{{ __('POS Terminal') }} · {{ auth()->user()->name }} · {{ $currentBranch?->branch_number }} {{ $currentBranch?->name }}</small></div>
         @if($session)
             <span class="sess badge badge-green" style="background:rgba(255,255,255,.16);color:#eafff4"><span class="dot"></span> {{ __('Register open') }}</span>
         @else
@@ -187,6 +188,7 @@
 @php
     $posData = [
         'products' => $products,
+        'branchId' => $currentBranch?->id,
         'routes' => [
             'lookup' => route('pos.lookup'),
             'catalog' => route('pos.catalog'),

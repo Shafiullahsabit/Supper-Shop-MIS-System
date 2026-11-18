@@ -16,12 +16,13 @@
 <div class="card">
     <div class="table-wrap">
         <table class="data">
-            <thead><tr><th>{{ __('Reference') }}</th><th>{{ __('Date') }}</th><th>{{ __('Supplier') }}</th><th>{{ __('Status') }}</th><th class="t-right">{{ __('Total') }}</th><th class="t-right">{{ __('Paid') }}</th><th></th></tr></thead>
+            <thead><tr><th>{{ __('Reference') }}</th><th>{{ __('Date') }}</th>@if(auth()->user()->hasRole('Super Admin'))<th>{{ __('Branch') }}</th>@endif<th>{{ __('Supplier') }}</th><th>{{ __('Status') }}</th><th class="t-right">{{ __('Total') }}</th><th class="t-right">{{ __('Paid') }}</th><th></th></tr></thead>
             <tbody>
             @forelse($purchases as $p)
                 <tr onclick="location='{{ route('purchases.show',$p) }}'" style="cursor:pointer">
                     <td class="t-title t-mono">{{ $p->reference }}</td>
                     <td>{{ $p->purchase_date->translatedFormat('d M Y') }}</td>
+                    @if(auth()->user()->hasRole('Super Admin'))<td>{{ $p->branch?->branch_number }} · {{ $p->branch?->name }}</td>@endif
                     <td>{{ $p->supplier->name ?? '—' }}</td>
                     <td>
                         @if($p->status=='received')<span class="badge badge-green">{{ __('Received') }}</span>
@@ -37,7 +38,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="7"><div class="empty">@include('partials.icon',['name'=>'inbox'])<h4>{{ __('No purchases recorded') }}</h4></div></td></tr>
+                <tr><td colspan="{{ auth()->user()->hasRole('Super Admin') ? 8 : 7 }}"><div class="empty">@include('partials.icon',['name'=>'inbox'])<h4>{{ __('No purchases recorded') }}</h4></div></td></tr>
             @endforelse
             </tbody>
         </table>

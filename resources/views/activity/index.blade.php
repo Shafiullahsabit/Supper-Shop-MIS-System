@@ -23,18 +23,19 @@
 <div class="card">
     <div class="table-wrap">
         <table class="data">
-            <thead><tr><th>{{ __('When') }}</th><th>{{ __('User') }}</th><th>{{ __('Action') }}</th><th>{{ __('Description') }}</th><th>{{ __('IP') }}</th></tr></thead>
+            <thead><tr><th>{{ __('When') }}</th><th>{{ __('User') }}</th>@if(auth()->user()->hasRole('Super Admin'))<th>{{ __('Branch') }}</th>@endif<th>{{ __('Action') }}</th><th>{{ __('Description') }}</th><th>{{ __('IP') }}</th></tr></thead>
             <tbody>
             @forelse($logs as $log)
                 <tr>
                     <td>{{ $log->created_at->translatedFormat('d M Y, h:i A') }}<div class="t-sub">{{ $log->created_at->diffForHumans() }}</div></td>
                     <td class="t-title">{{ $log->user->name ?? __('System') }}</td>
+                    @if(auth()->user()->hasRole('Super Admin'))<td>{{ $log->branch?->branch_number }} · {{ $log->branch?->name }}</td>@endif
                     <td><span class="badge badge-{{ $colors[$log->action] ?? 'gray' }}">{{ __(ucfirst($log->action)) }}</span></td>
                     <td>{{ $log->description }}</td>
                     <td class="t-mono t-sub">{{ $log->ip_address ?? '—' }}</td>
                 </tr>
             @empty
-                <tr><td colspan="5"><div class="empty">@include('partials.icon',['name'=>'activity'])<h4>{{ __('No activity recorded') }}</h4></div></td></tr>
+                <tr><td colspan="{{ auth()->user()->hasRole('Super Admin') ? 6 : 5 }}"><div class="empty">@include('partials.icon',['name'=>'activity'])<h4>{{ __('No activity recorded') }}</h4></div></td></tr>
             @endforelse
             </tbody>
         </table>

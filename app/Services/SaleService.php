@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\ActivityLog;
+use App\Models\Branch;
+use App\Models\BranchInventory;
 use App\Models\CashSession;
 use App\Models\Customer;
 use App\Models\Product;
@@ -10,6 +12,7 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Setting;
 use App\Models\StockAdjustment;
+use App\Support\BranchContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -29,16 +32,29 @@ class SaleService
     {
         $allowOversell = (bool) ($options['allow_oversell'] ?? false);
         $clientUuid = $payload['client_uuid'] ?? null;
+        $requestedBranchId = $options['branch_id'] ?? null;
+        if ($requestedBranchId !== null && ! auth()->user()?->hasRole('Super Admin')) {
+            abort(403);
+        }
+
+        $branchId = $requestedBranchId ? (int) $requestedBranchId : BranchContext::id();
+        if ($requestedBranchId && ! Branch::whereKey($branchId)->where('is_active', true)->exists()) {
+            throw ValidationException::withMessages(['branch' => __('Select an active branch before creating a sale.')]);
+        }
+
+        if (! $branchId) {
+            throw ValidationException::withMessages(['branch' => __('Select an active branch before creating a sale.')]);
+        }
 
         // Idempotency: a queued offline sale that is re-sent must never be inserted twice.
         if ($clientUuid) {
-            $existing = Sale::where('client_uuid', $clientUuid)->first();
+            $existing = Sale::where('client_uuid', $clientUuid)->where('branch_id', $branchId)->first();
             if ($existing) {
                 return $existing->load('items', 'customer', 'cashier');
             }
         }
 
-        return DB::transaction(function () use ($payload, $userId, $allowOversell, $clientUuid) {
+        return DB::transaction(function () use ($payload, $userId, $allowOversell, $clientUuid, $branchId) {
             $lines = collect($payload['items'] ?? []);
 
             if ($lines->isEmpty()) {
@@ -59,18 +75,24 @@ class SaleService
                 if (! $product) {
                     throw ValidationException::withMessages(['items' => __('A product in the cart no longer exists.')]);
                 }
+                $inventory = BranchInventory::where('branch_id', $branchId)
+                    ->where('product_id', $product->id)
+                    ->lockForUpdate()->first();
+                if (! $inventory) {
+                    throw ValidationException::withMessages(['items' => __('This product has no inventory record for the active branch.')]);
+                }
 
                 $qty = round((float) $line['quantity'], 3);
                 if ($qty <= 0) {
                     continue;
                 }
 
-                if ($product->stock_quantity < $qty) {
+                if ($inventory->stock_quantity < $qty) {
                     if (! $allowOversell) {
                         throw ValidationException::withMessages([
                             'items' => __('Insufficient stock for :name (have :have, need :need).', [
                                 'name' => $product->name,
-                                'have' => $product->stock_quantity,
+                                'have' => $inventory->stock_quantity,
                                 'need' => $qty,
                             ]),
                         ]);
@@ -91,6 +113,7 @@ class SaleService
 
                 $preparedItems[] = [
                     'product' => $product,
+                    'inventory' => $inventory,
                     'name' => $product->name,
                     'price' => $price,
                     'cost' => (float) $product->cost_price,
@@ -121,7 +144,8 @@ class SaleService
             }
             $change = round($paid - $total, 2);
 
-            $session = CashSession::where('user_id', $userId)->where('status', 'open')->latest('opened_at')->first();
+            $session = CashSession::where('user_id', $userId)->where('branch_id', $branchId)
+                ->where('status', 'open')->latest('opened_at')->first();
 
             $isOffline = (bool) ($payload['is_offline'] ?? false);
             $offlineAt = ! empty($payload['offline_created_at'])
@@ -135,6 +159,7 @@ class SaleService
             }
 
             $sale = Sale::create([
+                'branch_id' => $branchId,
                 'invoice_no' => Sale::generateInvoiceNo(),
                 'client_uuid' => $clientUuid,
                 'customer_id' => $payload['customer_id'] ?? null,
@@ -162,6 +187,8 @@ class SaleService
             foreach ($preparedItems as $item) {
                 /** @var Product $product */
                 $product = $item['product'];
+                /** @var BranchInventory $inventory */
+                $inventory = $item['inventory'];
 
                 SaleItem::create([
                     'sale_id' => $sale->id,
@@ -175,7 +202,7 @@ class SaleService
                     'subtotal' => $item['subtotal'],
                 ]);
 
-                $product->decrement('stock_quantity', $item['quantity']);
+                $inventory->decrement('stock_quantity', $item['quantity']);
             }
 
             // Loyalty points + spend tracking
@@ -219,9 +246,13 @@ class SaleService
 
             foreach ($sale->items as $item) {
                 if ($item->product_id && $item->product) {
-                    $before = $item->product->stock_quantity;
-                    $item->product->increment('stock_quantity', $item->quantity);
+                    $inventory = BranchInventory::where('branch_id', $sale->branch_id)
+                        ->where('product_id', $item->product_id)
+                        ->lockForUpdate()->firstOrFail();
+                    $before = (float) $inventory->stock_quantity;
+                    $inventory->increment('stock_quantity', $item->quantity);
                     StockAdjustment::create([
+                        'branch_id' => $sale->branch_id,
                         'product_id' => $item->product_id,
                         'user_id' => auth()->id() ?? $sale->user_id,
                         'type' => 'add',

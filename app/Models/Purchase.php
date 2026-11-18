@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToBranch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Purchase extends Model
 {
+    use BelongsToBranch;
+
     protected $fillable = [
-        'reference', 'supplier_id', 'user_id', 'purchase_date', 'subtotal',
+        'branch_id', 'reference', 'supplier_id', 'user_id', 'purchase_date', 'subtotal',
         'discount', 'tax', 'shipping', 'total', 'paid', 'status', 'note',
     ];
 
@@ -26,6 +29,11 @@ class Purchase extends Model
     public function items(): HasMany
     {
         return $this->hasMany(PurchaseItem::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function supplier(): BelongsTo

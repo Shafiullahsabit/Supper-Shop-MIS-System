@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use App\Models\User;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -26,6 +27,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'reports.view',
         'users.manage', 'roles.manage',
         'settings.manage', 'backups.manage', 'activity.view',
+        'branches.manage',
     ];
 
     public function run(): void
@@ -36,9 +38,13 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::findOrCreate($name, 'web');
         }
 
-        // Admin — everything
+        // Admin — all permissions within their assigned branch
         $admin = Role::findOrCreate('Admin', 'web');
-        $admin->syncPermissions(Permission::all());
+        $admin->syncPermissions(Permission::where('name', '!=', 'branches.manage')->get());
+
+        // Super Admin — global access across all branches
+        $superAdmin = Role::findOrCreate('Super Admin', 'web');
+        $superAdmin->syncPermissions(Permission::all());
 
         // Manager — operations, no user/role/backup control
         $manager = Role::findOrCreate('Manager', 'web');
@@ -60,6 +66,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'products.view', 'customers.view', 'customers.manage',
             'sales.view', 'cash.manage',
         ]);
+
+        if (! User::role('Super Admin')->exists()) {
+            $firstAdmin = User::role('Admin')->oldest('id')->first();
+            $firstAdmin?->syncRoles('Super Admin');
+        }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }

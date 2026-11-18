@@ -4,8 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Support\BranchContext;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
@@ -21,6 +23,7 @@ class User extends Authenticatable
         'is_active',
         'last_login_ip',
         'last_login_at',
+        'branch_id',
     ];
 
     protected $hidden = [
@@ -34,8 +37,23 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'is_active' => 'boolean',
+            'branch_id' => 'integer',
             'password' => 'hashed',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if (! $user->branch_id) {
+                $user->branch_id = Branch::default()?->id;
+            }
+        });
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function sales(): HasMany
@@ -50,7 +68,8 @@ class User extends Authenticatable
 
     public function openCashSession()
     {
-        return $this->cashSessions()->where('status', 'open')->latest('opened_at')->first();
+        return $this->cashSessions()->where('branch_id', BranchContext::id())
+            ->where('status', 'open')->latest('opened_at')->first();
     }
 
     public function getRoleNameAttribute(): string

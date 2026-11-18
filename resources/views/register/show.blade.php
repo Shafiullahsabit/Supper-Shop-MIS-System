@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="page-head">
-    <div class="titles"><h2>{{ __('Register Session') }} #{{ $session->id }}</h2><p>{{ $session->user->name ?? '' }} · {{ $session->opened_at?->translatedFormat('d M Y') }}</p></div>
+    <div class="titles"><h2>{{ __('Register Session') }} #{{ $session->id }}</h2><p>{{ $session->user->name ?? '' }} · {{ $session->branch?->branch_number }} {{ $session->branch?->name }} · {{ $session->opened_at?->translatedFormat('d M Y') }}</p></div>
     <div class="actions">
         <a href="{{ route('register.index') }}" class="btn btn-light">@include('partials.icon',['name'=>'arrow-left']) {{ __('Back') }}</a>
         <button class="btn btn-light" onclick="window.print()">@include('partials.icon',['name'=>'printer']) {{ __('Print Z-Report') }}</button>

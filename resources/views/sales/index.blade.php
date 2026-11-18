@@ -23,12 +23,13 @@
 <div class="card">
     <div class="table-wrap">
         <table class="data">
-            <thead><tr><th>{{ __('Invoice') }}</th><th>{{ __('Date') }}</th><th>{{ __('Cashier') }}</th><th>{{ __('Customer') }}</th><th>{{ __('Payment') }}</th><th>{{ __('Status') }}</th><th class="t-right">{{ __('Total') }}</th><th></th></tr></thead>
+            <thead><tr><th>{{ __('Invoice') }}</th><th>{{ __('Date') }}</th>@if(auth()->user()->hasRole('Super Admin'))<th>{{ __('Branch') }}</th>@endif<th>{{ __('Cashier') }}</th><th>{{ __('Customer') }}</th><th>{{ __('Payment') }}</th><th>{{ __('Status') }}</th><th class="t-right">{{ __('Total') }}</th><th></th></tr></thead>
             <tbody>
             @forelse($sales as $sale)
                 <tr onclick="location='{{ route('sales.show',$sale) }}'" style="cursor:pointer">
                     <td class="t-title t-mono">{{ $sale->invoice_no }}</td>
                     <td>{{ $sale->created_at->translatedFormat('d M, h:i A') }}</td>
+                    @if(auth()->user()->hasRole('Super Admin'))<td>{{ $sale->branch?->branch_number }} · {{ $sale->branch?->name }}</td>@endif
                     <td>{{ $sale->cashier->name ?? '—' }}</td>
                     <td>{{ $sale->customer->name ?? __('Walk-in') }}</td>
                     <td><span class="badge badge-gray">{{ __(ucfirst($sale->payment_method)) }}</span></td>
@@ -37,7 +38,7 @@
                     <td onclick="event.stopPropagation()"><a href="{{ route('pos.receipt',$sale) }}" target="_blank" class="icon-btn" title="{{ __('Receipt') }}">@include('partials.icon',['name'=>'printer'])</a></td>
                 </tr>
             @empty
-                <tr><td colspan="8"><div class="empty">@include('partials.icon',['name'=>'receipt'])<h4>{{ __('No sales found') }}</h4></div></td></tr>
+                <tr><td colspan="{{ auth()->user()->hasRole('Super Admin') ? 9 : 8 }}"><div class="empty">@include('partials.icon',['name'=>'receipt'])<h4>{{ __('No sales found') }}</h4></div></td></tr>
             @endforelse
             </tbody>
         </table>

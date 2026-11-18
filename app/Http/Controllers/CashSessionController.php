@@ -14,7 +14,7 @@ class CashSessionController extends Controller
     public function index(): View
     {
         $current = Auth::user()->openCashSession();
-        $sessions = CashSession::with('user')
+        $sessions = CashSession::with('user', 'branch')
             ->when(Auth::user()->hasRole('Cashier'), fn ($q) => $q->where('user_id', Auth::id()))
             ->latest('opened_at')->paginate(15);
 
@@ -44,7 +44,7 @@ class CashSessionController extends Controller
 
     public function close(Request $request, CashSession $session): RedirectResponse
     {
-        abort_unless($session->user_id === Auth::id() || Auth::user()->hasAnyRole(['Admin', 'Manager']), 403);
+        abort_unless($session->user_id === Auth::id() || Auth::user()->hasAnyRole(['Super Admin', 'Admin', 'Manager']), 403);
 
         $data = $request->validate([
             'counted_cash' => ['required', 'numeric', 'min:0'],
@@ -66,9 +66,9 @@ class CashSessionController extends Controller
 
     public function show(CashSession $session): View
     {
-        abort_unless($session->user_id === Auth::id() || Auth::user()->hasAnyRole(['Admin', 'Manager']), 403);
+        abort_unless($session->user_id === Auth::id() || Auth::user()->hasAnyRole(['Super Admin', 'Admin', 'Manager']), 403);
 
-        $session->load('user', 'sales');
+        $session->load('user', 'sales', 'branch');
 
         return view('register.show', compact('session'));
     }

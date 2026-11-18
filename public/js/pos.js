@@ -268,6 +268,7 @@
         const sel = document.getElementById('customer');
         const payload = {
             client_uuid: clientUuid,
+            branch_id: D.branchId,
             items: cart.map(l => ({ product_id: l.id, quantity: l.qty, price: l.price, discount: l.discount || 0 })),
             customer_id: sel.value || null,
             payment_method: payMethod,
@@ -332,6 +333,7 @@
         if (window.POSOffline) {
             await POSOffline.enqueue({
                 client_uuid: payload.client_uuid,
+                branch_id: payload.branch_id,
                 items: payload.items,
                 customer_id: payload.customer_id,
                 payment_method: payload.payment_method,

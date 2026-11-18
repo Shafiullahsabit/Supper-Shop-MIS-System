@@ -74,7 +74,7 @@ class ReportController extends Controller
 
     public function inventory(Request $request): View
     {
-        $products = Product::with('category', 'unit')->orderBy('name')->get();
+        $products = Product::withCurrentInventory()->with('category', 'unit')->orderBy('name')->get();
 
         $summary = [
             'items' => $products->count(),

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\BranchInventory;
 use App\Models\Product;
 use App\Models\StockAdjustment;
 use Illuminate\Http\RedirectResponse;
@@ -10,23 +11,27 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use App\Support\BranchContext;
 
 class InventoryController extends Controller
 {
     public function index(Request $request): View
     {
-        $products = Product::with('category', 'unit')
+        $products = Product::withCurrentInventory()->with('category', 'unit')
             ->search($request->query('q'))
             ->when($request->query('filter') === 'low', fn ($q) => $q->lowStock())
-            ->when($request->query('filter') === 'out', fn ($q) => $q->where('stock_quantity', '<=', 0))
-            ->orderBy('stock_quantity')
+            ->when($request->query('filter') === 'out', fn ($q) => $q->outOfStock())
+            ->orderByStock()
             ->paginate(20)->withQueryString();
 
         $stats = [
             'total' => Product::count(),
             'low' => Product::active()->lowStock()->count(),
-            'out' => Product::active()->where('stock_quantity', '<=', 0)->count(),
-            'stock_value' => Product::sum(DB::raw('cost_price * stock_quantity')),
+            'out' => Product::active()->outOfStock()->count(),
+            'stock_value' => DB::table('branch_inventories')
+                ->join('products', 'products.id', '=', 'branch_inventories.product_id')
+                ->where('branch_inventories.branch_id', BranchContext::id())
+                ->sum(DB::raw('products.cost_price * branch_inventories.stock_quantity')),
         ];
 
         return view('inventory.index', compact('products', 'stats'));
@@ -42,11 +47,14 @@ class InventoryController extends Controller
         ]);
 
         DB::transaction(function () use ($data, $product) {
-            $before = (float) $product->stock_quantity;
+            $inventory = BranchInventory::where('branch_id', BranchContext::id())
+                ->where('product_id', $product->id)
+                ->lockForUpdate()->firstOrFail();
+            $before = (float) $inventory->stock_quantity;
             $delta = $data['type'] === 'add' ? $data['quantity'] : -$data['quantity'];
             $after = max(0, $before + $delta);
 
-            $product->update(['stock_quantity' => $after]);
+            $inventory->update(['stock_quantity' => $after]);
 
             StockAdjustment::create([
                 'product_id' => $product->id,
@@ -67,7 +75,7 @@ class InventoryController extends Controller
 
     public function history(Request $request): View
     {
-        $adjustments = StockAdjustment::with('product', 'user')
+        $adjustments = StockAdjustment::with('product', 'user', 'branch')
             ->latest()->paginate(25);
 
         return view('inventory.history', compact('adjustments'));

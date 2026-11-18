@@ -12,6 +12,12 @@
 </head>
 <body>
 @php $u = auth()->user(); @endphp
+@php
+    $currentBranch = \App\Models\Branch::find(\App\Support\BranchContext::id());
+    $activeBranches = $u->hasRole('Super Admin')
+        ? \App\Models\Branch::where('is_active', true)->orderBy('branch_number')->get()
+        : collect();
+@endphp
 <div class="app">
     <aside class="sidebar" id="sidebar">
         <div class="brand">
@@ -67,6 +73,9 @@
                 <div class="nav-section">{{ __('Administration') }}</div>
                 {!! $link('users.index', 'user', 'Users', 'users.manage') !!}
                 {!! $link('roles.index', 'shield', 'Roles &amp; Access', 'roles.manage') !!}
+                @if($u->hasRole('Super Admin'))
+                    {!! $link('branches.index', 'bag', 'Branches') !!}
+                @endif
                 {!! $link('settings.edit', 'settings', 'Settings', 'settings.manage') !!}
                 {!! $link('backups.index', 'database', 'Backups', 'backups.manage') !!}
                 {!! $link('activity.index', 'activity', 'Activity Log', 'activity.view') !!}
@@ -84,6 +93,20 @@
                 @hasSection('crumb')<div class="crumb">{{ __(trim($__env->yieldContent('crumb'))) }}</div>@endif
             </div>
             <div class="topbar-right">
+                @if($u->hasRole('Super Admin'))
+                    <form method="POST" action="{{ route('branches.switch') }}">
+                        @csrf
+                        <select class="select" name="branch_id" aria-label="{{ __('Active branch') }}" onchange="this.form.submit()">
+                            @foreach($activeBranches as $branch)
+                                <option value="{{ $branch->id }}" @selected((int) ($currentBranch?->id) === (int) $branch->id)>
+                                    {{ $branch->branch_number }} · {{ $branch->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </form>
+                @elseif($currentBranch)
+                    <span class="badge badge-blue">{{ $currentBranch->branch_number }} · {{ $currentBranch->name }}</span>
+                @endif
                 <div class="lang-switch">
                     <a href="{{ route('locale.switch','en') }}" class="{{ app()->getLocale() === 'en' ? 'on' : '' }}">English</a>
                     <a href="{{ route('locale.switch','prs') }}" class="{{ app()->getLocale() === 'prs' ? 'on' : '' }}">دری</a>

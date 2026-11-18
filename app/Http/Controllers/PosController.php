@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Sale;
 use App\Services\DrawerService;
 use App\Services\SaleService;
+use App\Support\BranchContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,10 +20,12 @@ class PosController extends Controller
 {
     public function index(): View
     {
-        $session = CashSession::where('user_id', Auth::id())->where('status', 'open')->latest('opened_at')->first();
+        $session = CashSession::where('user_id', Auth::id())
+            ->where('branch_id', BranchContext::id())
+            ->where('status', 'open')->latest('opened_at')->first();
 
         $categories = Category::where('is_active', true)->orderBy('name')->get();
-        $products = Product::active()->with('unit', 'category')->orderBy('name')->get();
+        $products = Product::active()->withCurrentInventory()->with('unit', 'category')->orderBy('name')->get();
         $customers = Customer::where('is_active', true)->orderBy('name')->get(['id', 'name', 'phone']);
         $held = HeldSale::where('user_id', Auth::id())->latest()->get();
 
@@ -46,7 +49,7 @@ class PosController extends Controller
             return response()->json(['exact' => true, 'products' => [$this->transform($product)]]);
         }
 
-        $products = Product::active()->search($term)->limit(20)->get()
+        $products = Product::active()->withCurrentInventory()->search($term)->limit(20)->get()
             ->map(fn ($p) => $this->transform($p));
 
         return response()->json(['exact' => false, 'products' => $products]);
@@ -90,7 +93,7 @@ class PosController extends Controller
      */
     public function catalog(): JsonResponse
     {
-        $products = Product::active()->with('unit', 'category')->orderBy('name')->get()
+        $products = Product::active()->withCurrentInventory()->with('unit', 'category')->orderBy('name')->get()
             ->map(fn ($p) => $this->transform($p));
 
         return response()->json([
@@ -119,6 +122,7 @@ class PosController extends Controller
             'sales.*.paid' => ['nullable', 'numeric', 'min:0'],
             'sales.*.discount' => ['nullable', 'numeric', 'min:0'],
             'sales.*.offline_created_at' => ['nullable', 'date'],
+            'sales.*.branch_id' => ['nullable', 'integer', 'exists:branches,id'],
         ]);
 
         $results = [];
@@ -131,7 +135,12 @@ class PosController extends Controller
                 }
                 $row['is_offline'] = true;
 
-                $sale = $service->checkout($row, Auth::id(), ['allow_oversell' => true]);
+                $options = ['allow_oversell' => true];
+                if (Auth::user()->hasRole('Super Admin') && ! empty($row['branch_id'])) {
+                    $options['branch_id'] = (int) $row['branch_id'];
+                }
+
+                $sale = $service->checkout($row, Auth::id(), $options);
 
                 $results[] = [
                     'client_uuid' => $row['client_uuid'],
@@ -153,7 +162,7 @@ class PosController extends Controller
 
     public function receipt(Sale $sale): View
     {
-        $sale->load('items', 'customer', 'cashier');
+        $sale->load('items', 'customer', 'cashier', 'branch');
 
         return view('pos.receipt', compact('sale'));
     }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CashSessionController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
@@ -50,6 +51,13 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('profile/password', [ProfileController::class, 'password'])->name('profile.password');
+
+    Route::middleware('role:Super Admin')->group(function () {
+        Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
+        Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+        Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
+        Route::post('branches/active', [BranchController::class, 'switch'])->name('branches.switch');
+    });
 
     // ---- POS ----
     Route::middleware('permission:pos.access')->group(function () {

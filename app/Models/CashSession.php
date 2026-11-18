@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToBranch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CashSession extends Model
 {
+    use BelongsToBranch;
+
     protected $fillable = [
-        'user_id', 'opening_float', 'cash_sales', 'card_sales', 'other_sales',
+        'branch_id', 'user_id', 'opening_float', 'cash_sales', 'card_sales', 'other_sales',
         'cash_refunds', 'expected_cash', 'counted_cash', 'difference',
         'orders_count', 'status', 'opened_at', 'closed_at', 'note',
     ];
@@ -30,6 +33,11 @@ class CashSession extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     public function sales(): HasMany

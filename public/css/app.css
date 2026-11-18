@@ -313,12 +313,48 @@ textarea.input { resize: vertical; min-height: 78px; }
 .progress > span { display: block; height: 100%; background: linear-gradient(90deg,var(--blue-500),var(--blue-400)); border-radius: 20px; }
 
 /* ---------- Bar chart (dashboard) ---------- */
+.dashboard-content-grid { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
 .bars { display: flex; align-items: flex-end; gap: 12px; height: 200px; padding: 10px 4px 0; }
 .bars .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
 .bars .bar { width: 100%; max-width: 46px; border-radius: 8px 8px 4px 4px; background: linear-gradient(180deg, var(--blue-500), var(--blue-400)); transition: height .5s ease; position: relative; min-height: 4px; }
 .bars .bar:hover { background: linear-gradient(180deg, var(--blue-600), var(--blue-500)); }
 .bars .bar-val { font-size: 11.5px; font-weight: 700; color: var(--ink-soft); }
 .bars .bar-lbl { font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.dashboard-chart-head { flex-wrap: wrap; }
+.dashboard-chart-heading { min-width: 0; }
+.dashboard-chart-tools { margin-inline-start: auto; display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.dashboard-chart-switch, .dashboard-period-switch { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 11px; background: #f5f7fb; }
+.dashboard-chart-switch button, .dashboard-period-switch button {
+  min-height: 32px; padding: 0 11px; border: 0; border-radius: 8px; background: transparent;
+  color: var(--ink-soft); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+  transition: background .15s, color .15s, box-shadow .15s;
+}
+.dashboard-chart-switch button:hover, .dashboard-period-switch button:hover { color: var(--blue-700); }
+.dashboard-chart-switch button:focus-visible, .dashboard-period-switch button:focus-visible { outline: 2px solid var(--blue-500); outline-offset: 2px; }
+.dashboard-chart-switch button.active, .dashboard-period-switch button.active {
+  background: #fff; color: var(--blue-700); box-shadow: 0 1px 5px rgba(24,49,89,.12);
+}
+.dashboard-chart-panel[hidden], .dashboard-period-switch[hidden] { display: none !important; }
+.dashboard-line-panel { min-height: 220px; }
+.dashboard-line-chart-wrap { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+.dashboard-revenue-line { display: block; width: 100%; height: auto; overflow: visible; font-family: inherit; }
+.dashboard-revenue-line .chart-grid { stroke: var(--line-2); stroke-dasharray: 4 5; }
+.dashboard-revenue-line .chart-axis-label { fill: var(--muted); font-size: 15px; font-weight: 600; }
+.dashboard-revenue-line .chart-area { fill: url(#dashboardRevenueGradient); }
+.dashboard-revenue-line .chart-line { fill: none; stroke: var(--blue-600); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.dashboard-revenue-line .chart-point { fill: #fff; stroke: var(--blue-600); stroke-width: 3; transition: r .15s, fill .15s; }
+.dashboard-revenue-line .chart-point:hover, .dashboard-revenue-line .chart-point:focus { r: 6; fill: var(--blue-100); outline: none; }
+
+@media (max-width: 900px) {
+  .dashboard-content-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .dashboard-chart-head { align-items: flex-start; }
+  .dashboard-chart-tools { width: 100%; margin-inline-start: 0; justify-content: flex-start; }
+  .dashboard-line-panel { padding: 14px 12px; }
+  .dashboard-revenue-line { min-width: 520px; }
+  .dashboard-revenue-line .chart-axis-label { font-size: 16px; }
+}
 
 /* ---------- Responsive shell ---------- */
 .hamburger { display: none; }

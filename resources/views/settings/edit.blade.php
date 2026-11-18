@@ -23,12 +23,28 @@
         <div style="display:flex;flex-direction:column;gap:18px">
             <div class="card card-pad">
                 <h3 style="margin-bottom:16px">{{ __('Currency & Tax') }}</h3>
+                @php
+                    $currencySymbol = setting('currency_symbol', '$');
+                    $isPresetCurrency = in_array($currencySymbol, ['$', '؋'], true);
+                @endphp
                 <div class="form-row">
-                    <div class="field"><label>{{ __('Currency symbol *') }}</label><input class="input" name="currency_symbol" value="{{ setting('currency_symbol','$') }}" required></div>
+                    <div class="field">
+                        <label for="currencyPreset">{{ __('Currency preset') }}</label>
+                        <select class="select" id="currencyPreset">
+                            <option value="$" @selected($currencySymbol === '$')>{{ __('US Dollar (USD)') }} · $</option>
+                            <option value="؋" @selected($currencySymbol === '؋')>{{ __('Afghan Afghani (AFN)') }} · ؋</option>
+                            <option value="custom" @selected(!$isPresetCurrency)>{{ __('Custom symbol') }}</option>
+                        </select>
+                    </div>
                     <div class="field"><label>{{ __('Symbol position') }}</label><select class="select" name="currency_position">
-                        <option value="before" @selected(setting('currency_position')=='before')>{{ __('Before ($100)') }}</option>
-                        <option value="after" @selected(setting('currency_position')=='after')>{{ __('After (100$)') }}</option></select></div>
+                        <option value="before" @selected(setting('currency_position')=='before')>{{ __('Symbol before amount') }}</option>
+                        <option value="after" @selected(setting('currency_position')=='after')>{{ __('Symbol after amount') }}</option></select></div>
                 </div>
+                <div class="field">
+                    <label for="currencySymbol">{{ __('Currency symbol *') }}</label>
+                    <input class="input" id="currencySymbol" name="currency_symbol" value="{{ $currencySymbol }}" required maxlength="5">
+                </div>
+                <div class="hint" style="margin-top:-8px;margin-bottom:14px">{{ __('Choose a preset or select Custom symbol to enter your own. This changes the displayed currency symbol only; it does not convert stored amounts.') }}</div>
                 <div class="field" style="margin:0"><label>{{ __('Default tax rate (%)') }}</label><input class="input t-mono" type="number" step="0.01" min="0" max="100" name="default_tax_rate" value="{{ setting('default_tax_rate','0') }}"></div>
             </div>
             <div class="card card-pad">
@@ -43,4 +59,26 @@
         <button class="btn btn-primary">@include('partials.icon',['name'=>'check']) {{ __('Save Settings') }}</button>
     </div>
 </form>
+
+<script>
+    (() => {
+        const currencyPreset = document.getElementById('currencyPreset');
+        const currencySymbol = document.getElementById('currencySymbol');
+
+        function syncCurrencySymbol() {
+            const isCustom = currencyPreset.value === 'custom';
+            currencySymbol.readOnly = !isCustom;
+            if (!isCustom) currencySymbol.value = currencyPreset.value;
+        }
+
+        currencyPreset.addEventListener('change', syncCurrencySymbol);
+        currencySymbol.addEventListener('input', () => {
+            if (currencySymbol.value !== currencyPreset.value) {
+                currencyPreset.value = 'custom';
+                syncCurrencySymbol();
+            }
+        });
+        syncCurrencySymbol();
+    })();
+</script>
 @endsection

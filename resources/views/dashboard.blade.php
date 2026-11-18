@@ -34,16 +34,26 @@
     </div>
 </div>
 
-<div class="grid" style="grid-template-columns: 1.6fr 1fr">
-    <div class="card">
-        <div class="card-head">
-            <div>
-                <h3>{{ __('Revenue — last 7 days') }}</h3>
-                <div class="sub">{{ __('Daily completed sales') }}</div>
+<div class="grid dashboard-content-grid">
+    <div class="card dashboard-revenue-card" data-dashboard-revenue-chart>
+        <div class="card-head dashboard-chart-head">
+            <div class="dashboard-chart-heading">
+                <h3 id="dashboardRevenueTitle">{{ __('Revenue — last 7 days') }}</h3>
+                <div class="sub" id="dashboardRevenueSubtitle">{{ __('Daily completed sales') }}</div>
             </div>
-            <div style="margin-inline-start:auto" class="badge badge-blue">{{ __('Total') }} {{ money($chart->sum('value')) }}</div>
+            <div class="dashboard-chart-tools">
+                <div class="dashboard-chart-switch" role="group" aria-label="{{ __('Chart type') }}">
+                    <button class="active" type="button" data-chart-mode="bars" aria-pressed="true">{{ __('Bar chart') }}</button>
+                    <button type="button" data-chart-mode="line" aria-pressed="false">{{ __('Line chart') }}</button>
+                </div>
+                <div class="dashboard-period-switch" id="dashboardPeriodSwitch" role="group" aria-label="{{ __('Time period') }}" hidden>
+                    <button class="active" type="button" data-chart-period="daily" aria-pressed="true">{{ __('Daily') }}</button>
+                    <button type="button" data-chart-period="weekly" aria-pressed="false">{{ __('Weekly') }}</button>
+                </div>
+                <div class="badge badge-blue">{{ __('Total') }} <span id="dashboardRevenueTotal">{{ money($chart->sum('value')) }}</span></div>
+            </div>
         </div>
-        <div class="card-pad">
+        <div class="card-pad dashboard-chart-panel" data-chart-panel="bars">
             <div class="bars">
                 @foreach($chart as $c)
                     <div class="bar-col">
@@ -52,6 +62,11 @@
                         <span class="bar-lbl">{{ $c['label'] }}</span>
                     </div>
                 @endforeach
+            </div>
+        </div>
+        <div class="card-pad dashboard-chart-panel dashboard-line-panel" data-chart-panel="line" hidden>
+            <div class="dashboard-line-chart-wrap">
+                <svg id="dashboardRevenueLine" class="dashboard-revenue-line" viewBox="0 0 760 300" role="img"></svg>
             </div>
         </div>
     </div>
@@ -75,7 +90,7 @@
     </div>
 </div>
 
-<div class="grid" style="grid-template-columns: 1.6fr 1fr; margin-top:18px">
+<div class="grid dashboard-content-grid" style="margin-top:18px">
     <div class="card">
         <div class="card-head">
             <h3>{{ __('Recent Sales') }}</h3>
@@ -122,4 +137,24 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    window.DASHBOARD_CHART_DATA = {
+        daily: @json($chart->values()),
+        weekly: @json($weeklyChart->values()),
+        currencySymbol: @json(setting('currency_symbol', '$')),
+        currencyPosition: @json(setting('currency_position', 'before')),
+        labels: {
+            barTitle: @json(__('Revenue — last 7 days')),
+            dailyTitle: @json(__('Daily revenue trend')),
+            weeklyTitle: @json(__('Weekly revenue trend')),
+            dailySubtitle: @json(__('Daily completed sales')),
+            weeklySubtitle: @json(__('Weekly completed sales')),
+            svgTitle: @json(__('Revenue trend chart')),
+        },
+    };
+</script>
+<script src="{{ asset('js/dashboard.js') }}" defer></script>
+@endpush
 @endsection

@@ -1,0 +1,19 @@
+{
+    "name": "SuperShop POS",
+    "short_name": "SuperShop",
+    "description": "SuperShop point-of-sale terminal — works offline.",
+    "start_url": "/pos",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "any",
+    "background_color": "#0f2c66",
+    "theme_color": "#1d4ed8",
+    "icons": [
+        {
+            "src": "/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

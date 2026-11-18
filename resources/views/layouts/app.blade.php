@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}" data-confirm="{{ __('Are you sure?') }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', 'Dashboard') · {{ setting('shop_name', 'SuperShop') }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    @stack('styles')
+</head>
+<body>
+@php $u = auth()->user(); @endphp
+<div class="app">
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <div class="brand-mark">S</div>
+            <div>
+                <div class="brand-name">{{ setting('shop_name', 'SuperShop') }}</div>
+                <div class="brand-sub">POS &amp; Management</div>
+            </div>
+        </div>
+        <nav class="nav">
+            @php
+                $link = function ($route, $icon, $label, $perm = null, $badge = null) use ($u) {
+                    if ($perm && ! $u->can($perm)) return '';
+                    $active = request()->routeIs($route) || request()->routeIs(str_replace('.index','.*',$route));
+                    $href = route($route);
+                    $b = $badge ? '<span class="nav-badge">'.$badge.'</span>' : '';
+                    $svg = view('partials.icon', ['name' => $icon])->render();
+                    return '<a href="'.$href.'" class="nav-link'.($active?' active':'').'">'.$svg.'<span>'.__($label).'</span>'.$b.'</a>';
+                };
+                $lowStock = \App\Models\Product::query()->active()->lowStock()->count();
+            @endphp
+
+            <div class="nav-section">{{ __('Main') }}</div>
+            {!! $link('dashboard', 'dashboard', 'Dashboard', 'dashboard.view') !!}
+            {!! $link('pos.index', 'pos', 'POS Terminal', 'pos.access') !!}
+            {!! $link('register.index', 'wallet', 'Cash Register', 'cash.manage') !!}
+
+            @if($u->canAny(['products.view','categories.manage','units.manage','inventory.view','suppliers.manage']))
+                <div class="nav-section">{{ __('Catalog') }}</div>
+                {!! $link('products.index', 'box', 'Products', 'products.view') !!}
+                {!! $link('categories.index', 'tag', 'Categories', 'categories.manage') !!}
+                {!! $link('units.index', 'ruler', 'Units', 'units.manage') !!}
+                {!! $link('inventory.index', 'boxes', 'Inventory', 'inventory.view', $lowStock ?: null) !!}
+                {!! $link('suppliers.index', 'truck', 'Suppliers', 'suppliers.manage') !!}
+            @endif
+
+            @if($u->canAny(['sales.view','purchases.view','customers.view']))
+                <div class="nav-section">{{ __('Operations') }}</div>
+                {!! $link('sales.index', 'receipt', 'Sales', 'sales.view') !!}
+                {!! $link('purchases.index', 'inbox', 'Purchases', 'purchases.view') !!}
+                {!! $link('customers.index', 'users', 'Customers', 'customers.view') !!}
+            @endif
+
+            @if($u->can('reports.view'))
+                <div class="nav-section">{{ __('Insights') }}</div>
+                {!! $link('reports.sales', 'chart', 'Sales Report', 'reports.view') !!}
+                {!! $link('reports.profit', 'trend', 'Profit Report', 'reports.view') !!}
+                {!! $link('reports.inventory', 'boxes', 'Stock Report', 'reports.view') !!}
+                {!! $link('reports.top', 'star', 'Top Products', 'reports.view') !!}
+            @endif
+
+            @if($u->canAny(['users.manage','roles.manage','settings.manage','backups.manage','activity.view']))
+                <div class="nav-section">{{ __('Administration') }}</div>
+                {!! $link('users.index', 'user', 'Users', 'users.manage') !!}
+                {!! $link('roles.index', 'shield', 'Roles &amp; Access', 'roles.manage') !!}
+                {!! $link('settings.edit', 'settings', 'Settings', 'settings.manage') !!}
+                {!! $link('backups.index', 'database', 'Backups', 'backups.manage') !!}
+                {!! $link('activity.index', 'activity', 'Activity Log', 'activity.view') !!}
+            @endif
+        </nav>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <button class="icon-btn hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                @include('partials.icon', ['name' => 'menu'])
+            </button>
+            <div>
+                <h1>{{ __(trim($__env->yieldContent('title', 'Dashboard'))) }}</h1>
+                @hasSection('crumb')<div class="crumb">{{ __(trim($__env->yieldContent('crumb'))) }}</div>@endif
+            </div>
+            <div class="topbar-right">
+                <div class="lang-switch">
+                    <a href="{{ route('locale.switch','en') }}" class="{{ app()->getLocale() === 'en' ? 'on' : '' }}">English</a>
+                    <a href="{{ route('locale.switch','prs') }}" class="{{ app()->getLocale() === 'prs' ? 'on' : '' }}">دری</a>
+                    <a href="{{ route('locale.switch','ps') }}" class="{{ app()->getLocale() === 'ps' ? 'on' : '' }}">پښتو</a>
+                </div>
+                @can('pos.access')
+                    <a href="{{ route('pos.index') }}" class="pos-btn">
+                        @include('partials.icon', ['name' => 'pos']) {{ __('Open POS') }}
+                    </a>
+                @endcan
+                <a href="{{ route('profile.edit') }}" class="user-chip">
+                    <div class="avatar">{{ strtoupper(substr($u->name,0,1)) }}</div>
+                    <div>
+                        <div class="u-name">{{ $u->name }}</div>
+                        <div class="u-role">{{ $u->role_name }}</div>
+                    </div>
+                </a>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button class="icon-btn danger" title="{{ __('Log out') }}">@include('partials.icon', ['name' => 'logout'])</button>
+                </form>
+            </div>
+        </header>
+
+        <main class="content">
+            @if(session('success'))
+                <div class="alert alert-success">@include('partials.icon', ['name' => 'check-circle']) {{ session('success') }}</div>
+            @endif
+            @if(session('error'))
+                <div class="alert alert-error">@include('partials.icon', ['name' => 'alert']) {{ session('error') }}</div>
+            @endif
+            @if($errors->any() && ! $errors->has('__pos'))
+                <div class="alert alert-error">
+                    @include('partials.icon', ['name' => 'alert'])
+                    <div>{{ $errors->first() }}</div>
+                </div>
+            @endif
+
+            @yield('content')
+        </main>
+    </div>
+</div>
+<script src="{{ asset('js/app.js') }}"></script>
+@stack('scripts')
+</body>
+</html>

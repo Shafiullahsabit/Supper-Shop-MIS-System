@@ -6,12 +6,12 @@ use App\Models\ActivityLog;
 use App\Models\BranchInventory;
 use App\Models\Product;
 use App\Models\StockAdjustment;
+use App\Support\BranchContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
-use App\Support\BranchContext;
 
 class InventoryController extends Controller
 {
@@ -71,6 +71,23 @@ class InventoryController extends Controller
         ActivityLog::record('adjusted', "Stock adjusted for {$product->name}", $product);
 
         return back()->with('success', __('Stock updated for :name.', ['name' => $product->name]));
+    }
+
+    public function updateThreshold(Request $request, Product $product): RedirectResponse
+    {
+        $data = $request->validate([
+            'alert_quantity' => ['required', 'numeric', 'min:0'],
+        ]);
+
+        $inventory = BranchInventory::query()
+            ->where('branch_id', BranchContext::id())
+            ->where('product_id', $product->id)
+            ->firstOrFail();
+        $inventory->update(['alert_quantity' => $data['alert_quantity']]);
+
+        ActivityLog::record('updated', "Updated low-stock threshold for {$product->name}", $product);
+
+        return back()->with('success', __('Low-stock threshold updated for :name.', ['name' => $product->name]));
     }
 
     public function history(Request $request): View

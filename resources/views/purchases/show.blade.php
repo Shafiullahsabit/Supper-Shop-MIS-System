@@ -37,6 +37,43 @@
             <div style="display:flex;justify-content:space-between;margin-top:12px"><span class="text-muted">{{ __('Paid') }}</span><span class="t-mono">{{ money($purchase->paid) }}</span></div>
             <div style="display:flex;justify-content:space-between"><span class="text-muted">{{ __('Balance due') }}</span><span class="t-mono fw-700 text-red">{{ money(max(0,$purchase->total - $purchase->paid)) }}</span></div>
         </div>
+        <div class="card">
+            <div class="card-head"><h3>{{ __('Payment History') }}</h3></div>
+            <div class="table-wrap">
+                <table class="data">
+                    <thead><tr><th>{{ __('Date') }}</th><th>{{ __('Method') }}</th><th>{{ __('Recorded by') }}</th><th class="t-right">{{ __('Amount') }}</th></tr></thead>
+                    <tbody>
+                    @forelse($purchase->payments as $payment)
+                        <tr>
+                            <td>{{ $payment->paid_at->translatedFormat('d M Y') }}</td>
+                            <td>{{ $payment->payment_method ? __(ucfirst($payment->payment_method)) : __('Existing payment') }}</td>
+                            <td>{{ $payment->user?->name ?? '—' }}</td>
+                            <td class="t-right t-mono fw-700">{{ money($payment->amount) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="4"><div class="empty" style="padding:20px">{{ __('No payment records') }}</div></td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @can('purchases.manage')
+                @if($purchase->outstanding > 0)
+                <form method="POST" action="{{ route('purchases.payments.store',$purchase) }}" class="card-pad">
+                    @csrf
+                    <h4 style="margin-bottom:12px">{{ __('Record Supplier Payment') }}</h4>
+                    <div class="field"><label>{{ __('Amount') }}</label><input class="input t-mono" type="number" step="0.01" min="0.01" max="{{ $purchase->outstanding }}" name="amount" required></div>
+                    <div class="form-row">
+                        <div class="field"><label>{{ __('Payment method') }}</label>
+                            <select class="select" name="payment_method">@foreach(['cash','card','mobile','bank','other'] as $method)<option value="{{ $method }}">{{ __(ucfirst($method)) }}</option>@endforeach</select>
+                        </div>
+                        <div class="field"><label>{{ __('Payment date') }}</label><input class="input" type="date" name="paid_at" value="{{ now()->format('Y-m-d') }}" required></div>
+                    </div>
+                    <div class="field"><label>{{ __('Note') }}</label><textarea class="input" name="note"></textarea></div>
+                    <button class="btn btn-primary btn-block">{{ __('Record Payment') }}</button>
+                </form>
+                @endif
+            @endcan
+        </div>
         <div class="card card-pad">
             <h3 style="margin-bottom:14px">{{ __('Details') }}</h3>
             <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="text-muted">{{ __('Branch') }}</span><span class="fw-700">{{ $purchase->branch?->branch_number }} · {{ $purchase->branch?->name }}</span></div>

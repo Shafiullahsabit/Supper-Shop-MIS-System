@@ -44,6 +44,11 @@
             <div class="field"><label>{{ __('Shipping') }}</label><input class="input t-mono" type="number" step="0.01" min="0" name="shipping" value="0" id="shipIn"></div>
             <div style="display:flex;justify-content:space-between;padding-top:12px;border-top:2px dashed var(--line);font-size:20px;font-weight:800;margin-bottom:14px"><span>{{ __('Total') }}</span><span class="text-blue t-mono" id="totalOut">{{ money(0) }}</span></div>
             <div class="field"><label>{{ __('Amount paid') }}</label><input class="input t-mono" type="number" step="0.01" min="0" name="paid" value="0"></div>
+            <div class="field"><label>{{ __('Payment method') }}</label>
+                <select class="select" name="payment_method">
+                    @foreach(['cash','card','mobile','bank','other'] as $method)<option value="{{ $method }}">{{ __(ucfirst($method)) }}</option>@endforeach
+                </select>
+            </div>
             <div class="field"><label>{{ __('Note') }}</label><textarea class="input" name="note"></textarea></div>
             <button class="btn btn-primary btn-block" type="submit" id="submitBtn">@include('partials.icon',['name'=>'check']) {{ __('Save Purchase') }}</button>
         </div>

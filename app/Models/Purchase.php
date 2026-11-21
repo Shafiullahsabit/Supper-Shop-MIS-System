@@ -31,6 +31,11 @@ class Purchase extends Model
         return $this->hasMany(PurchaseItem::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(PurchasePayment::class)->orderBy('paid_at');
+    }
+
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
@@ -44,6 +49,11 @@ class Purchase extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getOutstandingAttribute(): float
+    {
+        return max(0, round((float) $this->total - (float) $this->paid, 2));
     }
 
     public static function generateReference(): string

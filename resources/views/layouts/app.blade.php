@@ -54,11 +54,17 @@
                 {!! $link('suppliers.index', 'truck', 'Suppliers', 'suppliers.manage') !!}
             @endif
 
-            @if($u->canAny(['sales.view','purchases.view','customers.view']))
+            @if($u->can('inventory.transfers'))
+                <div class="nav-section">{{ __('Logistics') }}</div>
+                {!! $link('transfers.index', 'truck', 'Stock Transfers', 'inventory.transfers') !!}
+            @endif
+
+            @if($u->canAny(['sales.view','purchases.view','customers.view','expenses.view']))
                 <div class="nav-section">{{ __('Operations') }}</div>
                 {!! $link('sales.index', 'receipt', 'Sales', 'sales.view') !!}
                 {!! $link('purchases.index', 'inbox', 'Purchases', 'purchases.view') !!}
                 {!! $link('customers.index', 'users', 'Customers', 'customers.view') !!}
+                {!! $link('expenses.index', 'wallet', 'Expenses', 'expenses.view') !!}
             @endif
 
             @if($u->can('reports.view'))
@@ -118,16 +124,15 @@
                     </a>
                 @endcan
                 <a href="{{ route('profile.edit') }}" class="user-chip">
-                    <div class="avatar">{{ strtoupper(substr($u->name,0,1)) }}</div>
+                    @include('partials.user-avatar', ['user' => $u])
                     <div>
                         <div class="u-name">{{ $u->name }}</div>
                         <div class="u-role">{{ $u->role_name }}</div>
                     </div>
                 </a>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="icon-btn danger" title="{{ __('Log out') }}">@include('partials.icon', ['name' => 'logout'])</button>
-                </form>
+                <button type="button" class="icon-btn danger" title="{{ __('Log out') }}" aria-label="{{ __('Log out') }}" aria-haspopup="dialog" aria-controls="logoutConfirmation" onclick="SS.openModal('logoutConfirmation')">
+                    @include('partials.icon', ['name' => 'logout'])
+                </button>
             </div>
         </header>
 
@@ -147,7 +152,25 @@
 
             @yield('content')
         </main>
+        <footer class="app-footer">
+            <span>{{ setting('shop_name', 'SuperShop') }}</span>
+            <span>{{ __('System version') }} <strong>v{{ config('app.version') }}</strong></span>
+        </footer>
     </div>
+</div>
+<div class="modal-overlay" id="logoutConfirmation" style="display:none">
+    <section class="modal logout-modal" role="dialog" aria-modal="true" aria-labelledby="logoutTitle" aria-describedby="logoutDescription">
+        <div class="logout-modal-icon">@include('partials.icon', ['name' => 'logout'])</div>
+        <h2 id="logoutTitle">{{ __('Sign out?') }}</h2>
+        <p id="logoutDescription">{{ __('Are you sure you want to sign out of your account?') }}</p>
+        <div class="logout-modal-actions">
+            <button type="button" class="btn btn-light" data-modal-autofocus onclick="SS.closeModal('logoutConfirmation')">{{ __('Stay signed in') }}</button>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button class="btn btn-danger">@include('partials.icon', ['name' => 'logout']) {{ __('Log out') }}</button>
+            </form>
+        </div>
+    </section>
 </div>
 <script src="{{ asset('js/app.js') }}"></script>
 @stack('scripts')

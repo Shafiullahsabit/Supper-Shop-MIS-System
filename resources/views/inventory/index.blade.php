@@ -35,7 +35,17 @@
                     <td><div class="t-title">{{ $p->name }}</div><div class="t-sub t-mono">{{ $p->sku }}</div></td>
                     <td>@if($p->category)<span class="badge badge-blue">{{ $p->category->name }}</span>@else<span class="text-muted">—</span>@endif</td>
                     <td class="t-right t-mono fw-700">{{ rtrim(rtrim(number_format($p->stock_quantity,3),'0'),'.') }} <span class="text-muted fs-sm">{{ $p->unit->short_name ?? '' }}</span></td>
-                    <td class="t-right t-mono">{{ rtrim(rtrim(number_format($p->alert_quantity,3),'0'),'.') }}</td>
+                    <td class="t-right t-mono">
+                        @can('inventory.adjust')
+                        <form method="POST" action="{{ route('inventory.threshold',$p) }}" class="flex gap-1" style="justify-content:flex-end">
+                            @csrf @method('PUT')
+                            <input class="input t-mono" aria-label="{{ __('Low-stock threshold') }}" type="number" step="0.001" min="0" name="alert_quantity" value="{{ $p->alert_quantity }}" style="width:92px;padding:6px 8px">
+                            <button class="btn btn-soft btn-sm">{{ __('Save') }}</button>
+                        </form>
+                        @else
+                            {{ rtrim(rtrim(number_format($p->alert_quantity,3),'0'),'.') }}
+                        @endcan
+                    </td>
                     <td>
                         @if($p->stock_status=='out')<span class="badge badge-red"><span class="dot"></span> {{ __('Out') }}</span>
                         @elseif($p->stock_status=='low')<span class="badge badge-amber"><span class="dot"></span> {{ __('Low') }}</span>

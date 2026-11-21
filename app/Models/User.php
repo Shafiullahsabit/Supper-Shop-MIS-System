@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
+use App\Support\BranchContext;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use App\Support\BranchContext;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
@@ -54,6 +54,11 @@ class User extends Authenticatable
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar ? '/storage/'.ltrim($this->avatar, '/') : null;
     }
 
     public function sales(): HasMany

@@ -8,6 +8,7 @@ use App\Http\Controllers\CashSessionController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
@@ -135,11 +137,27 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('permission:purchases.manage')->group(function () {
         Route::get('purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
         Route::post('purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+        Route::post('purchases/{purchase}/payments', [PurchaseController::class, 'recordPayment'])->name('purchases.payments.store');
     });
     Route::get('purchases/{purchase}', [PurchaseController::class, 'show'])
         ->middleware('permission:purchases.view')->name('purchases.show');
     Route::delete('purchases/{purchase}', [PurchaseController::class, 'destroy'])
         ->middleware('permission:purchases.manage')->name('purchases.destroy');
+    Route::get('reports/purchases/export/{format}', [ReportController::class, 'exportPurchases'])
+        ->middleware('permission:purchases.view')->name('reports.purchases.export');
+
+    // ---- Expenses ----
+    Route::middleware('permission:expenses.view')->prefix('expenses')->name('expenses.')->group(function () {
+        Route::get('/', [ExpenseController::class, 'index'])->name('index');
+        Route::get('export/{format}', [ReportController::class, 'exportExpenses'])->name('export');
+    });
+    Route::middleware('permission:expenses.manage')->group(function () {
+        Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+        Route::put('expenses/{expense}', [ExpenseController::class, 'update'])->name('expenses.update');
+        Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+        Route::post('expense-categories', [ExpenseController::class, 'storeCategory'])->name('expense-categories.store');
+        Route::delete('expense-categories/{category}', [ExpenseController::class, 'destroyCategory'])->name('expense-categories.destroy');
+    });
 
     // ---- Inventory ----
     Route::middleware('permission:inventory.view')->group(function () {
@@ -148,6 +166,24 @@ Route::middleware(['auth', 'active'])->group(function () {
     });
     Route::post('inventory/{product}/adjust', [InventoryController::class, 'adjust'])
         ->middleware('permission:inventory.adjust')->name('inventory.adjust');
+    Route::put('inventory/{product}/threshold', [InventoryController::class, 'updateThreshold'])
+        ->middleware('permission:inventory.adjust')->name('inventory.threshold');
+
+    Route::middleware('permission:inventory.transfers')->prefix('stock-transfers')->name('transfers.')->group(function () {
+        Route::get('/', [StockTransferController::class, 'index'])->name('index');
+        Route::get('create', [StockTransferController::class, 'create'])->name('create');
+        Route::post('/', [StockTransferController::class, 'store'])->name('store');
+        Route::get('{transfer}/receive', [StockTransferController::class, 'receiveForm'])->name('receive.form');
+        Route::post('{transfer}/receive', [StockTransferController::class, 'receive'])->name('receive');
+        Route::post('{transfer}/dispatch', [StockTransferController::class, 'dispatch'])->name('dispatch');
+        Route::post('{transfer}/cancel', [StockTransferController::class, 'cancel'])->name('cancel');
+        Route::get('{transfer}', [StockTransferController::class, 'show'])->name('show');
+    });
+
+    Route::middleware('role:Super Admin')->prefix('stock-transfers')->name('transfers.')->group(function () {
+        Route::post('{transfer}/approve', [StockTransferController::class, 'approve'])->name('approve');
+        Route::post('{transfer}/reject', [StockTransferController::class, 'reject'])->name('reject');
+    });
 
     // ---- Sales ----
     Route::middleware('permission:sales.view')->group(function () {
@@ -160,8 +196,11 @@ Route::middleware(['auth', 'active'])->group(function () {
     // ---- Reports ----
     Route::middleware('permission:reports.view')->prefix('reports')->name('reports.')->group(function () {
         Route::get('sales', [ReportController::class, 'sales'])->name('sales');
+        Route::get('sales/export/{format}', [ReportController::class, 'exportSales'])->name('sales.export');
         Route::get('profit', [ReportController::class, 'profit'])->name('profit');
+        Route::get('profit/export/{format}', [ReportController::class, 'exportProfit'])->name('profit.export');
         Route::get('inventory', [ReportController::class, 'inventory'])->name('inventory');
+        Route::get('inventory/export/{format}', [ReportController::class, 'exportInventory'])->name('inventory.export');
         Route::get('top-products', [ReportController::class, 'topProducts'])->name('top');
     });
 

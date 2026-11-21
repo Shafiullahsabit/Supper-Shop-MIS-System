@@ -25,4 +25,14 @@ class Supplier extends Model
     {
         return $this->hasMany(Purchase::class);
     }
+
+    public function getOutstandingBalanceAttribute(): float
+    {
+        return round(
+            (float) $this->opening_balance
+                + (float) ($this->purchases_total ?? 0)
+                - (float) ($this->purchases_paid ?? 0),
+            2
+        );
+    }
 }

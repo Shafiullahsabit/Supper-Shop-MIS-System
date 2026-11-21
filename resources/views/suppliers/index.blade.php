@@ -16,23 +16,24 @@
 <div class="card">
     <div class="table-wrap">
         <table class="data">
-            <thead><tr><th>{{ __('Supplier') }}</th><th>{{ __('Contact') }}</th><th>{{ __('Products') }}</th><th>{{ __('Status') }}</th><th></th></tr></thead>
+            <thead><tr><th>{{ __('Supplier') }}</th><th>{{ __('Contact') }}</th><th>{{ __('Products') }}</th><th class="t-right">{{ __('Outstanding Balance') }}</th><th>{{ __('Status') }}</th><th></th></tr></thead>
             <tbody>
             @forelse($suppliers as $s)
                 <tr>
                     <td><div class="t-title">{{ $s->name }}</div>@if($s->company)<div class="t-sub">{{ $s->company }}</div>@endif</td>
                     <td>@if($s->phone)<div>{{ $s->phone }}</div>@endif @if($s->email)<div class="t-sub">{{ $s->email }}</div>@endif</td>
                     <td><span class="badge badge-blue">{{ $s->products_count }}</span></td>
+                    <td class="t-right t-mono fw-700 {{ $s->outstanding_balance > 0 ? 'text-red' : 'text-green' }}">{{ money($s->outstanding_balance) }}</td>
                     <td>@if($s->is_active)<span class="badge badge-green">{{ __('Active') }}</span>@else<span class="badge badge-gray">{{ __('Inactive') }}</span>@endif</td>
                     <td>
                         <div class="flex gap-1" style="justify-content:flex-end">
-                            <button class="icon-btn" onclick='SS.edit("editSup",{{ Illuminate\Support\Js::from(['name'=>$s->name,'company'=>$s->company,'email'=>$s->email,'phone'=>$s->phone,'address'=>$s->address,'is_active'=>$s->is_active]) }}); document.getElementById("editSupForm").action="{{ route('suppliers.update',$s) }}"'>@include('partials.icon',['name'=>'edit'])</button>
+                            <button class="icon-btn" onclick='SS.edit("editSup",{{ Illuminate\Support\Js::from(['name'=>$s->name,'company'=>$s->company,'email'=>$s->email,'phone'=>$s->phone,'address'=>$s->address,'opening_balance'=>$s->opening_balance,'is_active'=>$s->is_active]) }}); document.getElementById("editSupForm").action="{{ route('suppliers.update',$s) }}"'>@include('partials.icon',['name'=>'edit'])</button>
                             <form method="POST" action="{{ route('suppliers.destroy',$s) }}" onsubmit="return SS.confirmSubmit(this,'{{ __('Delete this supplier?') }}')">@csrf @method('DELETE')<button class="icon-btn danger">@include('partials.icon',['name'=>'trash'])</button></form>
                         </div>
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="5"><div class="empty">@include('partials.icon',['name'=>'truck'])<h4>{{ __('No suppliers yet') }}</h4></div></td></tr>
+                <tr><td colspan="6"><div class="empty">@include('partials.icon',['name'=>'truck'])<h4>{{ __('No suppliers yet') }}</h4></div></td></tr>
             @endforelse
             </tbody>
         </table>
@@ -50,6 +51,7 @@
             <div class="field"><label>{{ __('Company') }}</label><input class="input" name="company"></div></div>
             <div class="form-row"><div class="field"><label>{{ __('Phone') }}</label><input class="input" name="phone"></div>
             <div class="field"><label>{{ __('Email') }}</label><input class="input" type="email" name="email"></div></div>
+            <div class="field"><label>{{ __('Opening Balance') }}</label><input class="input t-mono" type="number" step="0.01" min="0" name="opening_balance" value="0"></div>
             <div class="field" style="margin-bottom:14px"><label>{{ __('Address') }}</label><textarea class="input" name="address"></textarea></div>
             @if($cfg[2])<label class="switch"><input type="hidden" name="is_active" value="0"><input type="checkbox" name="is_active" value="1"><span class="track"></span><span style="font-size:13px;font-weight:600;color:var(--ink-soft)">{{ __('Active') }}</span></label>@endif
         </div>

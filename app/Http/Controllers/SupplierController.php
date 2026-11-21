@@ -12,6 +12,8 @@ class SupplierController extends Controller
     public function index(Request $request): View
     {
         $suppliers = Supplier::withCount('products')
+            ->withSum('purchases as purchases_total', 'total')
+            ->withSum('purchases as purchases_paid', 'paid')
             ->when($request->filled('q'), fn ($q) => $q->where('name', 'like', '%'.$request->q.'%')
                 ->orWhere('company', 'like', '%'.$request->q.'%')
                 ->orWhere('phone', 'like', '%'.$request->q.'%'))
@@ -49,7 +51,7 @@ class SupplierController extends Controller
             'email' => ['nullable', 'email', 'max:150'],
             'phone' => ['nullable', 'string', 'max:40'],
             'address' => ['nullable', 'string'],
-            'opening_balance' => ['nullable', 'numeric'],
+            'opening_balance' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
         ]);
     }

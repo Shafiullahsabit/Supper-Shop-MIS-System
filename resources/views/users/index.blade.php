@@ -32,7 +32,7 @@
                     }
                 @endphp
                 <tr>
-                    <td><div class="flex items-center gap-2"><div class="avatar" style="width:36px;height:36px;font-size:14px">{{ strtoupper(substr($usr->name,0,1)) }}</div><div><div class="t-title">{{ $usr->name }}</div><div class="t-sub">{{ $usr->email }}</div></div></div></td>
+                    <td><div class="flex items-center gap-2">@include('partials.user-avatar', ['user' => $usr, 'style' => 'width:36px;height:36px;font-size:14px;flex:none'])<div><div class="t-title">{{ $usr->name }}</div><div class="t-sub">{{ $usr->email }}</div></div></div></td>
                     @if($isSuperAdmin)<td>{{ $usr->branch?->branch_number }} · {{ $usr->branch?->name }}</td>@endif
                     <td>@foreach($usr->roles as $r)<span class="badge badge-violet">{{ $r->name }}</span>@endforeach</td>
                     <td>{{ $usr->phone ?? '—' }}</td>

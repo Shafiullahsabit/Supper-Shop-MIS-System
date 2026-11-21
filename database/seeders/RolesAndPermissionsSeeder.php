@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -21,7 +21,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'categories.manage', 'units.manage', 'suppliers.manage',
         'customers.view', 'customers.manage',
         'purchases.view', 'purchases.manage',
-        'inventory.view', 'inventory.adjust',
+        'expenses.view', 'expenses.manage',
+        'inventory.view', 'inventory.adjust', 'inventory.transfers', 'inventory.transfers.approve',
         'sales.view', 'sales.refund',
         'cash.manage',
         'reports.view',
@@ -40,7 +41,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Admin — all permissions within their assigned branch
         $admin = Role::findOrCreate('Admin', 'web');
-        $admin->syncPermissions(Permission::where('name', '!=', 'branches.manage')->get());
+        $admin->syncPermissions(Permission::whereNotIn('name', ['branches.manage', 'inventory.transfers.approve'])->get());
 
         // Super Admin — global access across all branches
         $superAdmin = Role::findOrCreate('Super Admin', 'web');
@@ -54,7 +55,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'categories.manage', 'units.manage', 'suppliers.manage',
             'customers.view', 'customers.manage',
             'purchases.view', 'purchases.manage',
-            'inventory.view', 'inventory.adjust',
+            'expenses.view', 'expenses.manage',
+            'inventory.view', 'inventory.adjust', 'inventory.transfers',
             'sales.view', 'sales.refund', 'cash.manage',
             'reports.view', 'activity.view',
         ]);

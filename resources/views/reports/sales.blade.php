@@ -5,10 +5,18 @@
 @section('content')
 <div class="page-head">
     <div class="titles"><h2>{{ __('Sales Report') }}</h2><p>{{ $from->translatedFormat('d M Y') }} — {{ $to->translatedFormat('d M Y') }}</p></div>
-    <form method="GET" class="actions">
+    <form method="GET" class="actions" action="{{ route('reports.sales') }}">
         <input type="date" name="from" value="{{ $from->format('Y-m-d') }}" class="input" style="width:auto">
         <input type="date" name="to" value="{{ $to->format('Y-m-d') }}" class="input" style="width:auto">
+        @if(auth()->user()->hasRole('Super Admin'))
+        <select name="branch_id" class="select" style="width:auto">
+            <option value="all" @selected($selectedBranch === 'all')>{{ __('All Branches') }}</option>
+            @foreach($branches as $branch)<option value="{{ $branch->id }}" @selected((string) $selectedBranch === (string) $branch->id)>{{ $branch->branch_number }} · {{ $branch->name }}</option>@endforeach
+        </select>
+        @endif
         <button class="btn btn-primary">{{ __('Apply') }}</button>
+        <a class="btn btn-light" href="{{ route('reports.sales.export', array_merge(request()->query(), ['format' => 'csv'])) }}">{{ __('CSV') }}</a>
+        <a class="btn btn-light" href="{{ route('reports.sales.export', array_merge(request()->query(), ['format' => 'xls'])) }}">{{ __('Excel') }}</a>
     </form>
 </div>
 

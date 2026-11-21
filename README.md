@@ -29,10 +29,22 @@ built-in database backup/restore system.
 
 - Products with SKU, barcode, cost/sale price, tax rate, category, unit, supplier, images.
 - Categories (color-coded), units (with decimal support for weighed goods), suppliers.
-- Stock tracking with **low-stock alerts**, manual stock adjustments (with full audit history).
+- Stock tracking with **per-branch low-stock thresholds**, dashboard alerts, and manual
+  stock adjustments (with full audit history).
 - **Branch-specific inventory** — each location has its own stock and low-stock threshold.
+- **Stock transfers** — request stock between branches, require Super Admin approval, deduct
+  source stock at dispatch, and record one or more destination receipts with shortage/damage
+  reasons. Branch users can only act for their assigned branch.
 - **Purchases / stock receiving** — recording a received purchase increases stock and
-  updates cost price.
+  updates cost price. Supplier payments are recorded individually; partial payments and
+  outstanding balances are visible in purchase and supplier records.
+
+### Expenses & Finance
+
+- Daily expenses with categories, payment methods, paid/unpaid status, and branch-aware
+  expense totals.
+- Supplier outstanding balances include opening balances and purchase amounts less
+  recorded payments.
 
 ### Sales & Customers
 
@@ -47,13 +59,19 @@ built-in database backup/restore system.
 
 ### Reports
 
-- Sales report (by day / payment method / cashier), profit report (per-product margins),
-  stock valuation report, top-selling products.
+- Sales report (by day / payment method / cashier), purchase and expense reports, profit
+  report (per-product margins), stock valuation report, and top-selling products.
+- CSV and Excel-compatible `.xls` exports for sales, purchases, expenses, inventory, and
+  profit reports. Transaction reports support date ranges and branch filters; inventory is
+  exported as a current stock snapshot for the selected branch(es).
 
 ### Administration
 
 - **Multi-branch access control** — Super Admin manages branches and sees all locations;
   Admin, Manager, and Cashier accounts are scoped to one assigned branch.
+- Branch Admins and Managers can request, dispatch, or receive transfers for their branch.
+  Super Admin approves or rejects requests; partial receipts are supported and discrepancies
+  must be explained before closing a transfer.
 - Branch names are stored as entered, branch numbers are unique, and new branches start with
   zero stock. Existing users, transactions, and product stock are migrated into **Main Branch (001)**.
 - **Role-based access control** (Super Admin / Admin / Manager / Cashier + custom roles) with a granular
@@ -106,6 +124,7 @@ Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 ### Environment settings (`.env`)
 
 ```env
+APP_VERSION=1.0.0
 DB_DATABASE=super_shop
 DB_USERNAME=root
 DB_PASSWORD=
@@ -114,6 +133,10 @@ DB_PASSWORD=
 POS_PRINTER_HOST=
 POS_PRINTER_PORT=9100
 ```
+
+`APP_VERSION` is displayed in the application footer and profile page. Set it to the
+release's semantic version when deploying an update; if configuration is cached, run
+`php artisan config:clear` after changing it.
 
 ---
 

@@ -31,5 +31,21 @@ class LocaleTest extends TestCase
         $this->assertNotSame('Dashboard', Lang::get('Dashboard', [], 'ps'));
         $this->assertNotSame('current_password', Lang::get('validation.current_password', [], 'prs'));
         $this->assertNotSame('current_password', Lang::get('validation.current_password', [], 'ps'));
+        $this->assertNotSame('Chats', Lang::get('Chats', [], 'prs'));
+        $this->assertNotSame('Chats', Lang::get('Chats', [], 'ps'));
+        $this->assertNotSame('Notifications', Lang::get('Notifications', [], 'prs'));
+        $this->assertNotSame('Notifications', Lang::get('Notifications', [], 'ps'));
+        $this->assertNotSame('New message from :name', Lang::get('New message from :name', ['name' => 'Amina'], 'prs'));
+        $this->assertNotSame('New message from :name', Lang::get('New message from :name', ['name' => 'Amina'], 'ps'));
+        $this->assertNotSame('Low stock alert', Lang::get('Low stock alert', [], 'prs'));
+        $this->assertNotSame('Low stock alert', Lang::get('Low stock alert', [], 'ps'));
+        $this->assertNotSame(
+            ':reference was approved and is ready to dispatch.',
+            Lang::get(':reference was approved and is ready to dispatch.', ['reference' => 'ST-1'], 'prs')
+        );
+        $this->assertNotSame(
+            ':reference was approved and is ready to dispatch.',
+            Lang::get(':reference was approved and is ready to dispatch.', ['reference' => 'ST-1'], 'ps')
+        );
     }
 }

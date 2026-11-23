@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Notifications;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Notification;
+
+class OperationalNotification extends Notification
+{
+    use Queueable;
+
+    public function __construct(private readonly array $payload)
+    {
+    }
+
+    public function via($notifiable): array
+    {
+        return ['database'];
+    }
+
+    public function toArray($notifiable): array
+    {
+        return $this->payload;
+    }
+
+    public function toDatabase($notifiable): array
+    {
+        return $this->payload;
+    }
+}

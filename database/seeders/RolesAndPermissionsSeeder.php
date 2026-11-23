@@ -25,6 +25,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'inventory.view', 'inventory.adjust', 'inventory.transfers', 'inventory.transfers.approve',
         'sales.view', 'sales.refund',
         'cash.manage',
+        'messages.announce',
         'reports.view',
         'users.manage', 'roles.manage',
         'settings.manage', 'backups.manage', 'activity.view',
@@ -58,7 +59,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'expenses.view', 'expenses.manage',
             'inventory.view', 'inventory.adjust', 'inventory.transfers',
             'sales.view', 'sales.refund', 'cash.manage',
-            'reports.view', 'activity.view',
+            'messages.announce', 'reports.view', 'activity.view',
         ]);
 
         // Cashier — POS front line

@@ -66,6 +66,7 @@ class StockTransferWorkflowTest extends TestCase
     public function test_transfer_request_requires_super_admin_approval_before_stock_can_be_dispatched(): void
     {
         $transfer = $this->createTransfer(4);
+        $this->assertNotificationEvent($this->superAdmin, 'transfer_requested');
         $this->assertSame(StockTransfer::STATUS_PENDING_APPROVAL, $transfer->status);
         $this->assertSame(10.0, $this->stock($this->sourceBranch));
         $this->assertSame(1.0, $this->stock($this->destinationBranch));
@@ -82,6 +83,7 @@ class StockTransferWorkflowTest extends TestCase
             'status' => StockTransfer::STATUS_APPROVED,
             'approved_by' => $this->superAdmin->id,
         ]);
+        $this->assertNotificationEvent($this->sourceAdmin, 'transfer_approved');
 
         $this->actingAs($this->destinationAdmin)
             ->post(route('transfers.dispatch', $transfer))
@@ -96,6 +98,7 @@ class StockTransferWorkflowTest extends TestCase
             'id' => $transfer->id,
             'status' => StockTransfer::STATUS_IN_TRANSIT,
         ]);
+        $this->assertNotificationEvent($this->destinationAdmin, 'transfer_dispatched');
     }
 
     public function test_partial_receipts_add_only_received_stock_and_can_complete_in_multiple_deliveries(): void
@@ -116,6 +119,7 @@ class StockTransferWorkflowTest extends TestCase
         $transfer->refresh();
         $this->assertSame(StockTransfer::STATUS_PARTIALLY_RECEIVED, $transfer->status);
         $this->assertSame(3.0, $this->stock($this->destinationBranch));
+        $this->assertNotificationEvent($this->sourceAdmin, 'transfer_received');
 
         $this->actingAs($this->destinationAdmin)
             ->post(route('transfers.receive', $transfer), [
@@ -174,6 +178,7 @@ class StockTransferWorkflowTest extends TestCase
             'quantity_received' => 3,
             'discrepancy_reason' => 'Two units were damaged in transit.',
         ]);
+        $this->assertNotificationEvent($this->sourceAdmin, 'transfer_received');
     }
 
     public function test_dispatch_rechecks_stock_and_never_partially_deducts_an_unavailable_transfer(): void
@@ -243,6 +248,7 @@ class StockTransferWorkflowTest extends TestCase
             ->post(route('transfers.reject', $rejected), ['rejection_reason' => 'Stock is needed at the source.'])
             ->assertRedirect();
         $this->assertSame(StockTransfer::STATUS_REJECTED, $rejected->refresh()->status);
+        $this->assertNotificationEvent($this->sourceAdmin, 'transfer_rejected');
         $this->assertSame(10.0, $this->stock($this->sourceBranch));
 
         $cancelled = $this->createTransfer(3);
@@ -250,6 +256,7 @@ class StockTransferWorkflowTest extends TestCase
             ->post(route('transfers.cancel', $cancelled))
             ->assertRedirect();
         $this->assertSame(StockTransfer::STATUS_CANCELLED, $cancelled->refresh()->status);
+        $this->assertNotificationEvent($this->destinationAdmin, 'transfer_cancelled');
         $this->assertSame(10.0, $this->stock($this->sourceBranch));
     }
 
@@ -293,5 +300,12 @@ class StockTransferWorkflowTest extends TestCase
             ->where('branch_id', $branch->id)
             ->where('product_id', $this->product->id)
             ->value('stock_quantity');
+    }
+
+    private function assertNotificationEvent(User $user, string $event): void
+    {
+        $this->assertTrue($user->notifications()->get()->contains(
+            fn ($notification) => ($notification->data['event'] ?? null) === $event
+        ));
     }
 }

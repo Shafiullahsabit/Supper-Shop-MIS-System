@@ -10,6 +10,8 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -53,6 +55,21 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::get('profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('profile/password', [ProfileController::class, 'password'])->name('profile.password');
+
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead'])
+        ->whereUuid('notification')->name('notifications.read');
+
+    Route::get('messages', [MessageController::class, 'index'])->name('messages.index');
+    Route::get('messages/compose', [MessageController::class, 'compose'])->name('messages.compose');
+    Route::post('messages', [MessageController::class, 'store'])->name('messages.store');
+    Route::get('messages/{thread}', [MessageController::class, 'show'])
+        ->whereNumber('thread')->name('messages.show');
+    Route::post('messages/{thread}/read', [MessageController::class, 'markRead'])
+        ->whereNumber('thread')->name('messages.read');
+    Route::post('messages/{thread}/reply', [MessageController::class, 'reply'])
+        ->whereNumber('thread')->name('messages.reply');
 
     Route::middleware('role:Super Admin')->group(function () {
         Route::get('branches', [BranchController::class, 'index'])->name('branches.index');

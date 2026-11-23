@@ -8,12 +8,17 @@ use App\Models\StockTransferItem;
 use App\Models\StockTransferReceipt;
 use App\Models\StockTransferReceiptItem;
 use App\Models\User;
+use App\Services\OperationalNotificationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 
 class StockTransferService
 {
+    public function __construct(private readonly OperationalNotificationService $notifications)
+    {
+    }
+
     public function create(
         User $user,
         int $sourceBranchId,
@@ -117,11 +122,12 @@ class StockTransferService
 
     public function dispatch(StockTransfer $transfer, User $user): StockTransfer
     {
-        return DB::transaction(function () use ($transfer, $user): StockTransfer {
+        $lowStockAlerts = [];
+        $transfer = DB::transaction(function () use ($transfer, $user, &$lowStockAlerts): StockTransfer {
             $transfer = StockTransfer::query()->lockForUpdate()->findOrFail($transfer->id);
             $this->ensureStatus($transfer, [StockTransfer::STATUS_APPROVED]);
 
-            $items = $transfer->items()->orderBy('product_id')->lockForUpdate()->get();
+            $items = $transfer->items()->with('product')->orderBy('product_id')->lockForUpdate()->get();
             $inventories = BranchInventory::query()
                 ->where('branch_id', $transfer->source_branch_id)
                 ->whereIn('product_id', $items->pluck('product_id'))
@@ -148,10 +154,20 @@ class StockTransferService
 
             foreach ($items as $item) {
                 $inventory = $inventories->get($item->product_id);
+                $stockBefore = (float) $inventory->stock_quantity;
+                $threshold = (float) $inventory->alert_quantity;
+                $stockAfter = $stockBefore - (float) $item->requested_quantity;
+                if ($stockBefore > $threshold && $stockAfter <= $threshold) {
+                    $lowStockAlerts[] = [
+                        (int) $transfer->source_branch_id,
+                        $item->product->name,
+                        $stockAfter,
+                        $threshold,
+                    ];
+                }
+
                 $inventory->update([
-                    'stock_quantity' => $this->formatQuantity(
-                        $this->quantityUnits($inventory->stock_quantity) - $this->quantityUnits($item->requested_quantity)
-                    ),
+                    'stock_quantity' => $this->formatQuantity($this->quantityUnits($stockAfter)),
                 ]);
                 $item->update(['dispatched_quantity' => $item->requested_quantity]);
             }
@@ -164,6 +180,12 @@ class StockTransferService
 
             return $transfer;
         });
+
+        foreach ($lowStockAlerts as $alert) {
+            $this->notifications->lowStock(...$alert);
+        }
+
+        return $transfer;
     }
 
     public function receive(StockTransfer $transfer, User $user, array $lines, bool $closeTransfer, ?string $notes): StockTransfer

@@ -62,6 +62,9 @@ class BranchLowStockAlertTest extends TestCase
             'product_id' => $product->id,
             'alert_quantity' => 1,
         ]);
+        $this->assertTrue($admin->notifications()->get()->contains(
+            fn ($notification) => ($notification->data['event'] ?? null) === 'low_stock'
+        ));
 
         $this->get(route('inventory.index'))
             ->assertOk()

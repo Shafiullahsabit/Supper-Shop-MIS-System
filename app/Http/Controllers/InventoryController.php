@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\BranchInventory;
 use App\Models\Product;
 use App\Models\StockAdjustment;
+use App\Services\OperationalNotificationService;
 use App\Support\BranchContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,7 +38,11 @@ class InventoryController extends Controller
         return view('inventory.index', compact('products', 'stats'));
     }
 
-    public function adjust(Request $request, Product $product): RedirectResponse
+    public function adjust(
+        Request $request,
+        Product $product,
+        OperationalNotificationService $notifications
+    ): RedirectResponse
     {
         $data = $request->validate([
             'type' => ['required', 'in:add,subtract'],
@@ -46,15 +51,20 @@ class InventoryController extends Controller
             'note' => ['nullable', 'string', 'max:255'],
         ]);
 
-        DB::transaction(function () use ($data, $product) {
+        $lowStockAlert = null;
+        DB::transaction(function () use ($data, $product, &$lowStockAlert) {
             $inventory = BranchInventory::where('branch_id', BranchContext::id())
                 ->where('product_id', $product->id)
                 ->lockForUpdate()->firstOrFail();
             $before = (float) $inventory->stock_quantity;
+            $threshold = (float) $inventory->alert_quantity;
             $delta = $data['type'] === 'add' ? $data['quantity'] : -$data['quantity'];
             $after = max(0, $before + $delta);
 
             $inventory->update(['stock_quantity' => $after]);
+            if ($before > $threshold && $after <= $threshold) {
+                $lowStockAlert = [(int) BranchContext::id(), $product->name, $after, $threshold];
+            }
 
             StockAdjustment::create([
                 'product_id' => $product->id,
@@ -68,12 +78,20 @@ class InventoryController extends Controller
             ]);
         });
 
+        if ($lowStockAlert) {
+            $notifications->lowStock(...$lowStockAlert);
+        }
+
         ActivityLog::record('adjusted', "Stock adjusted for {$product->name}", $product);
 
         return back()->with('success', __('Stock updated for :name.', ['name' => $product->name]));
     }
 
-    public function updateThreshold(Request $request, Product $product): RedirectResponse
+    public function updateThreshold(
+        Request $request,
+        Product $product,
+        OperationalNotificationService $notifications
+    ): RedirectResponse
     {
         $data = $request->validate([
             'alert_quantity' => ['required', 'numeric', 'min:0'],
@@ -83,7 +101,18 @@ class InventoryController extends Controller
             ->where('branch_id', BranchContext::id())
             ->where('product_id', $product->id)
             ->firstOrFail();
+        $stock = (float) $inventory->stock_quantity;
+        $wasLow = $stock <= (float) $inventory->alert_quantity;
         $inventory->update(['alert_quantity' => $data['alert_quantity']]);
+
+        if (! $wasLow && $stock <= (float) $data['alert_quantity']) {
+            $notifications->lowStock(
+                (int) BranchContext::id(),
+                $product->name,
+                $stock,
+                (float) $data['alert_quantity']
+            );
+        }
 
         ActivityLog::record('updated', "Updated low-stock threshold for {$product->name}", $product);
 

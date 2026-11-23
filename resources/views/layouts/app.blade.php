@@ -17,6 +17,7 @@
     $activeBranches = $u->hasRole('Super Admin')
         ? \App\Models\Branch::where('is_active', true)->orderBy('branch_number')->get()
         : collect();
+    $unreadNotifications = $u->unreadNotifications()->count();
 @endphp
 <div class="app">
     <aside class="sidebar" id="sidebar">
@@ -42,6 +43,8 @@
 
             <div class="nav-section">{{ __('Main') }}</div>
             {!! $link('dashboard', 'dashboard', 'Dashboard', 'dashboard.view') !!}
+            {!! $link('messages.index', 'inbox', 'Messages') !!}
+            {!! $link('notifications.index', 'bell', 'Notifications', null, $unreadNotifications ?: null) !!}
             {!! $link('pos.index', 'pos', 'POS Terminal', 'pos.access') !!}
             {!! $link('register.index', 'wallet', 'Cash Register', 'cash.manage') !!}
 
@@ -99,6 +102,12 @@
                 @hasSection('crumb')<div class="crumb">{{ __(trim($__env->yieldContent('crumb'))) }}</div>@endif
             </div>
             <div class="topbar-right">
+                <a class="icon-btn notification-bell" href="{{ route('notifications.index') }}" aria-label="{{ __('Notifications') }}">
+                    @include('partials.icon', ['name' => 'bell'])
+                    @if($unreadNotifications > 0)
+                        <span class="notification-bell-count">{{ $unreadNotifications > 99 ? '99+' : $unreadNotifications }}</span>
+                    @endif
+                </a>
                 @if($u->hasRole('Super Admin'))
                     <form method="POST" action="{{ route('branches.switch') }}">
                         @csrf

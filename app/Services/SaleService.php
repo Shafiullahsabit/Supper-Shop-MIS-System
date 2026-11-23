@@ -18,6 +18,10 @@ use Illuminate\Validation\ValidationException;
 
 class SaleService
 {
+    public function __construct(private readonly OperationalNotificationService $notifications)
+    {
+    }
+
     /**
      * Persist a completed POS sale inside a single transaction:
      * validates stock, writes sale + items, decrements inventory,
@@ -189,6 +193,8 @@ class SaleService
                 $product = $item['product'];
                 /** @var BranchInventory $inventory */
                 $inventory = $item['inventory'];
+                $stockBefore = (float) $inventory->stock_quantity;
+                $threshold = (float) $inventory->alert_quantity;
 
                 SaleItem::create([
                     'sale_id' => $sale->id,
@@ -203,6 +209,10 @@ class SaleService
                 ]);
 
                 $inventory->decrement('stock_quantity', $item['quantity']);
+                $stockAfter = $stockBefore - $item['quantity'];
+                if ($stockBefore > $threshold && $stockAfter <= $threshold) {
+                    $this->notifications->lowStock($branchId, $product->name, $stockAfter, $threshold);
+                }
             }
 
             // Loyalty points + spend tracking

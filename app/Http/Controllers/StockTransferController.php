@@ -6,6 +6,7 @@ use App\Models\ActivityLog;
 use App\Models\Branch;
 use App\Models\Product;
 use App\Models\StockTransfer;
+use App\Services\OperationalNotificationService;
 use App\Services\StockTransferService;
 use App\Support\BranchContext;
 use Illuminate\Http\RedirectResponse;
@@ -69,7 +70,11 @@ class StockTransferController extends Controller
         return view('transfers.create', compact('sourceBranch', 'branches', 'products'));
     }
 
-    public function store(Request $request, StockTransferService $service): RedirectResponse
+    public function store(
+        Request $request,
+        StockTransferService $service,
+        OperationalNotificationService $notifications
+    ): RedirectResponse
     {
         $sourceBranch = Branch::query()->whereKey(BranchContext::id())
             ->where('is_active', true)->firstOrFail();
@@ -102,6 +107,7 @@ class StockTransferController extends Controller
             $data['notes'] ?? null
         );
         ActivityLog::record('created', "Created stock transfer {$transfer->reference}", $transfer);
+        $notifications->stockTransfer($transfer, 'requested');
 
         return redirect()->route('transfers.show', $transfer)
             ->with('success', __('Transfer request submitted for Super Admin approval.'));
@@ -132,30 +138,48 @@ class StockTransferController extends Controller
         ]);
     }
 
-    public function approve(Request $request, StockTransfer $transfer, StockTransferService $service): RedirectResponse
+    public function approve(
+        Request $request,
+        StockTransfer $transfer,
+        StockTransferService $service,
+        OperationalNotificationService $notifications
+    ): RedirectResponse
     {
         $transfer = $service->approve($transfer, $request->user());
         ActivityLog::record('updated', "Approved stock transfer {$transfer->reference}", $transfer);
+        $notifications->stockTransfer($transfer, 'approved');
 
         return back()->with('success', __('Transfer approved. The source branch can now dispatch it.'));
     }
 
-    public function reject(Request $request, StockTransfer $transfer, StockTransferService $service): RedirectResponse
+    public function reject(
+        Request $request,
+        StockTransfer $transfer,
+        StockTransferService $service,
+        OperationalNotificationService $notifications
+    ): RedirectResponse
     {
         $data = $request->validate([
             'rejection_reason' => ['required', 'string', 'max:1000'],
         ]);
         $transfer = $service->reject($transfer, $request->user(), $data['rejection_reason']);
         ActivityLog::record('updated', "Rejected stock transfer {$transfer->reference}", $transfer);
+        $notifications->stockTransfer($transfer, 'rejected');
 
         return back()->with('success', __('Transfer rejected.'));
     }
 
-    public function dispatch(Request $request, StockTransfer $transfer, StockTransferService $service): RedirectResponse
+    public function dispatch(
+        Request $request,
+        StockTransfer $transfer,
+        StockTransferService $service,
+        OperationalNotificationService $notifications
+    ): RedirectResponse
     {
         $this->authorizeBranchSide($request, $transfer, 'source_branch_id');
         $transfer = $service->dispatch($transfer, $request->user());
         ActivityLog::record('updated', "Dispatched stock transfer {$transfer->reference}", $transfer);
+        $notifications->stockTransfer($transfer, 'dispatched');
 
         return back()->with('success', __('Transfer dispatched. Source stock has been deducted.'));
     }
@@ -173,7 +197,12 @@ class StockTransferController extends Controller
         return view('transfers.receive', compact('transfer'));
     }
 
-    public function receive(Request $request, StockTransfer $transfer, StockTransferService $service): RedirectResponse
+    public function receive(
+        Request $request,
+        StockTransfer $transfer,
+        StockTransferService $service,
+        OperationalNotificationService $notifications
+    ): RedirectResponse
     {
         $this->authorizeBranchSide($request, $transfer, 'destination_branch_id');
         $data = $request->validate([
@@ -197,16 +226,23 @@ class StockTransferController extends Controller
             $data['notes'] ?? null
         );
         ActivityLog::record('updated', "Recorded receipt for stock transfer {$transfer->reference}", $transfer);
+        $notifications->stockTransfer($transfer, 'received');
 
         return redirect()->route('transfers.show', $transfer)
             ->with('success', __('Transfer receipt recorded.'));
     }
 
-    public function cancel(Request $request, StockTransfer $transfer, StockTransferService $service): RedirectResponse
+    public function cancel(
+        Request $request,
+        StockTransfer $transfer,
+        StockTransferService $service,
+        OperationalNotificationService $notifications
+    ): RedirectResponse
     {
         $this->authorizeBranchSide($request, $transfer, 'source_branch_id');
         $transfer = $service->cancel($transfer, $request->user());
         ActivityLog::record('updated', "Cancelled stock transfer {$transfer->reference}", $transfer);
+        $notifications->stockTransfer($transfer, 'cancelled');
 
         return back()->with('success', __('Transfer cancelled.'));
     }

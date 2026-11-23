@@ -69,6 +69,12 @@ built-in database backup/restore system.
 
 - **Multi-branch access control** — Super Admin manages branches and sees all locations;
   Admin, Manager, and Cashier accounts are scoped to one assigned branch.
+- **Operational notifications** — branch-aware in-app alerts for low-stock threshold
+  crossings and stock-transfer requests, approvals, dispatches, receipts, and discrepancies.
+  Users can filter unread alerts and mark them read from the notification center.
+- **Internal messaging** — Messenger-style conversation list and chat view with live
+  delivery via Laravel Reverb, read receipts, and private direct conversations. Branch or
+  role announcements remain read-only and messages appear in the notification center.
 - Branch Admins and Managers can request, dispatch, or receive transfers for their branch.
   Super Admin approves or rejects requests; partial receipts are supported and discrepancies
   must be explained before closing a transfer.
@@ -87,7 +93,7 @@ built-in database backup/restore system.
 - PHP 8.3+
 - Composer 2
 - MySQL 8+ (with `mysqldump` / `mysql` binaries on `PATH` for the backup feature)
-- Node is **not** required — the UI uses hand-written CSS/JS served from `public/`.
+- Node.js 20.19+ (or 22.12+) for building the live chat client with Vite.
 
 ---
 
@@ -105,21 +111,28 @@ User-entered shop, product, customer, and receipt text is not automatically tran
 # 1. Install dependencies
 composer install
 
-# 2. Generate app key (an .env is already configured for local MySQL as root/no-password)
+# 2. Create .env from .env.example, configure the database, and generate the app key
 php artisan key:generate
 
-# 3. Create the database
+# 3. Install and build the frontend
+npm install
+npm run build
+
+# 4. Create the database
 mysql -uroot -e "CREATE DATABASE super_shop CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# 4. Run migrations + seed demo data
+# 5. Run migrations + seed demo data
 php artisan migrate --seed
 php artisan db:seed --class=DemoSalesSeeder   # optional: sample sales for the dashboard
 
-# 5. Serve
-php artisan serve
+# 6. Start the app, queue worker, Vite, and Reverb for local development
+composer run dev
 ```
 
-Then open [http://127.0.0.1:8000](http://127.0.0.1:8000).
+Then open [http://127.0.0.1:8000](http://127.0.0.1:8000). Reverb is configured by the
+`REVERB_*` settings in `.env.example`; keep a Reverb server running in each environment
+that needs live chat. Messaging pages and saved messages remain available if Reverb is
+temporarily offline; real-time updates resume when Reverb and the queue worker are running.
 
 ### Environment settings (`.env`)
 

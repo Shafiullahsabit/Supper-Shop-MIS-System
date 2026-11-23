@@ -42,7 +42,8 @@ built-in database backup/restore system.
 ### Expenses & Finance
 
 - Daily expenses with categories, payment methods, paid/unpaid status, and branch-aware
-  expense totals.
+  expense totals. Each expense stores AFN or USD independently; totals and trend charts
+  remain separated by currency with no implicit conversion.
 - Supplier outstanding balances include opening balances and purchase amounts less
   recorded payments.
 

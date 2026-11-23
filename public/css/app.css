@@ -533,8 +533,8 @@ html[dir="rtl"] .mono { direction: ltr; }
   .transfer-reject-card { align-items: stretch; flex-direction: column; }
 }
 
-.notification-bell { position: relative; flex: none; }
-.notification-bell-count {
+.notification-bell, .message-shortcut { position: relative; flex: none; }
+.notification-bell-count, .message-shortcut-count {
   position: absolute; top: -5px; inset-inline-end: -6px; min-width: 18px; height: 18px;
   display: grid; place-items: center; padding: 0 4px; border: 2px solid #fff; border-radius: 20px;
   background: var(--red); color: #fff; font-size: 9px; font-weight: 800; line-height: 1;
@@ -565,6 +565,25 @@ html[dir="rtl"] .mono { direction: ltr; }
 .notification-empty > svg { width: 30px; height: 30px; color: var(--muted); }
 .notification-empty p { margin: 0; color: var(--muted); }
 .notification-pagination { margin-top: 16px; }
+
+.expense-currency-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.expense-currency-summary > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.expense-currency-summary span { color: var(--muted); font-size: 10px; font-weight: 700; }
+.expense-currency-summary strong { overflow: hidden; font-size: 14px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; }
+.expense-currency-note { margin: -4px 0 12px; color: var(--muted); font-size: 11.5px; }
+.expense-trend-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+.expense-trend-card { min-width: 0; }
+.expense-trend-head { align-items: flex-start; justify-content: space-between; gap: 12px; }
+.expense-trend-head h3 { font-size: 14px; }
+.expense-trend-head > strong { flex: none; font-size: 13px; }
+.expense-trend-scroll { overflow-x: auto; padding: 8px 18px 16px; }
+.expense-trend-bars { display: flex; min-width: 100%; min-height: 190px; align-items: flex-end; gap: 10px; }
+.expense-trend-column { display: flex; width: 52px; height: 180px; flex: 0 0 52px; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; }
+.expense-trend-value { color: var(--ink-soft); font-size: 9px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.expense-trend-track { display: flex; width: 100%; height: 125px; align-items: flex-end; }
+.expense-trend-bar { width: 100%; min-height: 3px; border-radius: 5px 5px 2px 2px; background: var(--blue-600); }
+.expense-trend-card[data-expense-currency="USD"] .expense-trend-bar { background: var(--green-600, #16a34a); }
+.expense-trend-label { color: var(--muted); font-size: 9px; white-space: nowrap; }
 
 .message-thread-list { display: grid; gap: 10px; }
 .message-thread-card {
@@ -678,6 +697,10 @@ html[dir="rtl"] .mono { direction: ltr; }
 .chat-composer .input { min-height: 42px; max-height: 130px; flex: 1; padding: 11px 13px; border-radius: 14px; resize: vertical; }
 .chat-composer .btn { width: 42px; height: 42px; flex: none; justify-content: center; padding: 0; border-radius: 50%; }
 .chat-composer .btn svg { margin: 0; }
+
+@media (max-width: 760px) {
+  .expense-trend-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .chat-compose-error { flex: 1; padding: 9px 11px; border-radius: 9px; background: #fff0ef; color: #aa2c27; font-size: 11.5px; }
 .chat-compose-error[hidden] { display: none !important; }
 .chat-announcement-note { padding: 15px; border-top: 1px solid var(--line); background: #fff; color: var(--muted); font-size: 12px; text-align: center; }

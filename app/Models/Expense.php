@@ -12,7 +12,7 @@ class Expense extends Model
 
     protected $fillable = [
         'branch_id', 'expense_category_id', 'user_id', 'expense_date',
-        'description', 'amount', 'payment_method', 'status', 'paid_at', 'note',
+        'description', 'amount', 'currency', 'payment_method', 'status', 'paid_at', 'note',
     ];
 
     protected $casts = [

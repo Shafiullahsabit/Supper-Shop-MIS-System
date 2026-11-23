@@ -217,14 +217,14 @@ class ReportController extends Controller
         $query->select([
             'expenses.expense_date', 'branches.name as branch_name',
             'expense_categories.name as category_name', 'expenses.description',
-            'expenses.amount', 'expenses.payment_method', 'expenses.status',
+            'expenses.amount', 'expenses.currency', 'expenses.payment_method', 'expenses.status',
             'expenses.paid_at', 'users.name as recorded_by', 'expenses.note',
         ])->orderBy('expenses.expense_date')->orderBy('expenses.id');
         $rows = (function () use ($query) {
             foreach ($query->cursor() as $expense) {
                 yield [
                     $expense->expense_date, $expense->branch_name, $expense->category_name,
-                    $expense->description, (float) $expense->amount,
+                    $expense->description, (float) $expense->amount, $expense->currency,
                     $expense->payment_method, $expense->status, $expense->paid_at,
                     $expense->recorded_by, $expense->note,
                 ];
@@ -233,7 +233,7 @@ class ReportController extends Controller
 
         return $exports->download('expenses-report', [
             __('Date'), __('Branch'), __('Category'), __('Description'), __('Amount'),
-            __('Payment Method'), __('Status'), __('Paid At'), __('Recorded by'), __('Note'),
+            __('Currency'), __('Payment Method'), __('Status'), __('Paid At'), __('Recorded by'), __('Note'),
         ], $rows, $format);
     }
 

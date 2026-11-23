@@ -69,6 +69,7 @@ class MessagingTest extends TestCase
         $this->assertSame(1, DB::table('jobs')->count());
         $this->assertSame(2, $thread->participants()->count());
         $this->assertSame('message_received', $recipient->unreadNotifications()->firstOrFail()->data['event']);
+        $recipient->unreadNotifications()->update(['read_at' => now()]);
 
         $this->actingAs($recipient)->postJson('/broadcasting/auth', [
             'socket_id' => '123.456',
@@ -83,7 +84,8 @@ class MessagingTest extends TestCase
             ->get(route('messages.index'))
             ->assertOk()
             ->assertSeeText($sender->name)
-            ->assertSeeText('1');
+            ->assertSee('aria-label="Messages"', false)
+            ->assertSee('class="message-shortcut-count">1</span>', false);
 
         $this->actingAs($recipient)
             ->get(route('messages.show', $thread))

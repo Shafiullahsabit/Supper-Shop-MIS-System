@@ -28,15 +28,57 @@
 </form>
 
 <div class="grid grid-3 mb-2">
-    <div class="card card-pad stat"><div class="ico ico-blue">@include('partials.icon',['name'=>'money'])</div><div class="label">{{ __('Total Expenses') }}</div><div class="value">{{ money($totals->amount) }}</div></div>
-    <div class="card card-pad stat"><div class="ico ico-green">@include('partials.icon',['name'=>'check-circle'])</div><div class="label">{{ __('Paid Expenses') }}</div><div class="value">{{ money($totals->paid) }}</div></div>
-    <div class="card card-pad stat"><div class="ico ico-amber">@include('partials.icon',['name'=>'alert'])</div><div class="label">{{ __('Unpaid Expenses') }}</div><div class="value">{{ money($totals->unpaid) }}</div></div>
+    @foreach([
+        ['label' => __('Total Expenses'), 'key' => 'amount', 'icon' => 'money', 'color' => 'ico-blue'],
+        ['label' => __('Paid Expenses'), 'key' => 'paid', 'icon' => 'check-circle', 'color' => 'ico-green'],
+        ['label' => __('Unpaid Expenses'), 'key' => 'unpaid', 'icon' => 'alert', 'color' => 'ico-amber'],
+    ] as $summary)
+        <div class="card card-pad stat">
+            <div class="ico {{ $summary['color'] }}">@include('partials.icon',['name' => $summary['icon']])</div>
+            <div class="label">{{ $summary['label'] }}</div>
+            <div class="expense-currency-summary">
+                @foreach(['AFN', 'USD'] as $currency)
+                    <div><span>{{ $currency }}</span><strong>{{ money($totals[$currency][$summary['key']], $currency) }}</strong></div>
+                @endforeach
+            </div>
+        </div>
+    @endforeach
+</div>
+
+<p class="expense-currency-note">{{ __('Totals and charts keep currencies separate; no exchange conversion is applied.') }}</p>
+<div class="expense-trend-grid">
+    @foreach(['AFN', 'USD'] as $currency)
+        @php
+            $series = collect($expenseTrend[$currency]);
+            $maxExpense = max(1, (float) $series->max('value'));
+            $currencyLabel = $currency === 'AFN' ? __('Afghan Afghani (AFN)') : __('US Dollar (USD)');
+        @endphp
+        <section class="card expense-trend-card" data-expense-currency="{{ $currency }}">
+            <div class="card-head expense-trend-head">
+                <div><h3>{{ __('Expense trend') }} · {{ $currencyLabel }}</h3><div class="sub">{{ $chartInterval === 'month' ? __('Monthly expenses') : __('Weekly expenses') }}</div></div>
+                <strong class="t-mono">{{ money($totals[$currency]['amount'], $currency) }}</strong>
+            </div>
+            <div class="expense-trend-scroll">
+                <div class="expense-trend-bars" role="img" aria-label="{{ $chartInterval === 'month' ? __('Monthly expenses') : __('Weekly expenses') }} — {{ $currency }}">
+                    @foreach($series as $point)
+                        <div class="expense-trend-column" title="{{ $point['date'] }}: {{ money($point['value'], $currency) }}">
+                            <span class="expense-trend-value">{{ $point['value'] > 0 ? number_format($point['value'], 0) : '—' }}</span>
+                            <div class="expense-trend-track">
+                                <div class="expense-trend-bar" style="height: {{ $point['value'] > 0 ? max(4, ($point['value'] / $maxExpense) * 100) : 2 }}%"></div>
+                            </div>
+                            <span class="expense-trend-label">{{ $point['label'] }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </section>
+    @endforeach
 </div>
 
 <div class="card">
     <div class="table-wrap">
         <table class="data">
-            <thead><tr><th>{{ __('Date') }}</th>@if(auth()->user()->hasRole('Super Admin'))<th>{{ __('Branch') }}</th>@endif<th>{{ __('Category') }}</th><th>{{ __('Description') }}</th><th>{{ __('Payment Method') }}</th><th>{{ __('Status') }}</th><th class="t-right">{{ __('Amount') }}</th>@can('expenses.manage')<th></th>@endcan</tr></thead>
+            <thead><tr><th>{{ __('Date') }}</th>@if(auth()->user()->hasRole('Super Admin'))<th>{{ __('Branch') }}</th>@endif<th>{{ __('Category') }}</th><th>{{ __('Description') }}</th><th>{{ __('Payment Method') }}</th><th>{{ __('Status') }}</th><th>{{ __('Currency') }}</th><th class="t-right">{{ __('Amount') }}</th>@can('expenses.manage')<th></th>@endcan</tr></thead>
             <tbody>
             @forelse($expenses as $expense)
                 <tr>
@@ -46,7 +88,8 @@
                     <td><div class="t-title">{{ $expense->description }}</div>@if($expense->note)<div class="t-sub">{{ $expense->note }}</div>@endif</td>
                     <td><span class="badge badge-gray">{{ __(ucfirst($expense->payment_method)) }}</span></td>
                     <td>@if($expense->status === 'paid')<span class="badge badge-green">{{ __('Paid') }}</span>@else<span class="badge badge-amber">{{ __('Unpaid') }}</span>@endif</td>
-                    <td class="t-right t-mono fw-700">{{ money($expense->amount) }}</td>
+                    <td>{{ $expense->currency }}</td>
+                    <td class="t-right t-mono fw-700">{{ money($expense->amount, $expense->currency) }}</td>
                     @can('expenses.manage')
                     <td>
                         <div class="flex gap-1" style="justify-content:flex-end">
@@ -55,6 +98,7 @@
                                 "expense_category_id" => $expense->expense_category_id,
                                 "description" => $expense->description,
                                 "amount" => $expense->amount,
+                                "currency" => $expense->currency,
                                 "payment_method" => $expense->payment_method,
                                 "status" => $expense->status,
                                 "note" => $expense->note,
@@ -67,7 +111,7 @@
                     @endcan
                 </tr>
             @empty
-                <tr><td colspan="{{ (auth()->user()->hasRole('Super Admin') ? 7 : 6) + (auth()->user()->can('expenses.manage') ? 1 : 0) }}"><div class="empty">@include('partials.icon',['name'=>'money'])<h4>{{ __('No expenses recorded') }}</h4></div></td></tr>
+                <tr><td colspan="{{ (auth()->user()->hasRole('Super Admin') ? 8 : 7) + (auth()->user()->can('expenses.manage') ? 1 : 0) }}"><div class="empty">@include('partials.icon',['name'=>'money'])<h4>{{ __('No expenses recorded') }}</h4></div></td></tr>
             @endforelse
             </tbody>
         </table>
@@ -76,6 +120,7 @@
 </div>
 
 @can('expenses.manage')
+@php $defaultExpenseCurrency = setting('currency_symbol', '$') === '؋' ? 'AFN' : 'USD'; @endphp
 @foreach([
     'addExpense' => [__('Add Expense'), route('expenses.store'), false],
     'editExpense' => [__('Edit Expense'), '#', true],
@@ -96,6 +141,12 @@
                 <div class="field"><label>{{ __('Amount') }}</label><input class="input t-mono" type="number" step="0.01" min="0.01" name="amount" required></div>
             </div>
             <div class="form-row">
+                <div class="field"><label>{{ __('Currency') }}</label>
+                    <select class="select" name="currency" required>
+                        <option value="AFN" @selected(old('currency', $defaultExpenseCurrency) === 'AFN')>{{ __('Afghan Afghani (AFN)') }}</option>
+                        <option value="USD" @selected(old('currency', $defaultExpenseCurrency) === 'USD')>{{ __('US Dollar (USD)') }}</option>
+                    </select>
+                </div>
                 <div class="field"><label>{{ __('Payment Method') }}</label>
                     <select class="select" name="payment_method">@foreach(['cash','card','mobile','bank','other'] as $method)<option value="{{ $method }}">{{ __(ucfirst($method)) }}</option>@endforeach</select>
                 </div>

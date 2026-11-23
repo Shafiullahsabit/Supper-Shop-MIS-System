@@ -42,6 +42,15 @@ class CurrencySettingsTest extends TestCase
         $this->assertStringContainsString('name="currency_symbol" value="€"', $html);
     }
 
+    public function test_expense_currency_formatting_is_independent_of_the_shop_currency(): void
+    {
+        Setting::put('currency_symbol', '€');
+
+        $this->assertSame('؋123.45', money(123.45, 'AFN'));
+        $this->assertSame('$123.45', money(123.45, 'USD'));
+        $this->assertSame('€123.45', money(123.45));
+    }
+
     private function renderSettings(): string
     {
         return view('settings.edit')

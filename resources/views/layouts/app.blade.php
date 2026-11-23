@@ -18,6 +18,18 @@
         ? \App\Models\Branch::where('is_active', true)->orderBy('branch_number')->get()
         : collect();
     $unreadNotifications = $u->unreadNotifications()->count();
+    $unreadMessages = \Illuminate\Support\Facades\DB::table('messages')
+        ->join('message_thread_participants', 'message_thread_participants.message_thread_id', '=', 'messages.message_thread_id')
+        ->where('message_thread_participants.user_id', $u->id)
+        ->where(function ($query) use ($u) {
+            $query->whereNull('messages.sender_id')
+                ->orWhere('messages.sender_id', '!=', $u->id);
+        })
+        ->where(function ($query) {
+            $query->whereNull('message_thread_participants.last_read_at')
+                ->orWhereColumn('messages.created_at', '>', 'message_thread_participants.last_read_at');
+        })
+        ->count();
 @endphp
 <div class="app">
     <aside class="sidebar" id="sidebar">
@@ -102,6 +114,12 @@
                 @hasSection('crumb')<div class="crumb">{{ __(trim($__env->yieldContent('crumb'))) }}</div>@endif
             </div>
             <div class="topbar-right">
+                <a class="icon-btn message-shortcut" href="{{ route('messages.index') }}" aria-label="{{ __('Messages') }}">
+                    @include('partials.icon', ['name' => 'message'])
+                    @if($unreadMessages > 0)
+                        <span class="message-shortcut-count">{{ $unreadMessages > 99 ? '99+' : $unreadMessages }}</span>
+                    @endif
+                </a>
                 <a class="icon-btn notification-bell" href="{{ route('notifications.index') }}" aria-label="{{ __('Notifications') }}">
                     @include('partials.icon', ['name' => 'bell'])
                     @if($unreadNotifications > 0)

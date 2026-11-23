@@ -13,7 +13,9 @@ use App\Models\SaleItem;
 use App\Models\Supplier;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ExpenseAndReportExportTest extends TestCase
@@ -55,6 +57,7 @@ class ExpenseAndReportExportTest extends TestCase
             'expense_date' => now()->toDateString(),
             'description' => 'Main branch electricity',
             'amount' => 45.50,
+            'currency' => 'AFN',
             'payment_method' => 'bank',
             'status' => 'unpaid',
         ])->assertRedirect()->assertSessionHasNoErrors();
@@ -64,6 +67,7 @@ class ExpenseAndReportExportTest extends TestCase
             'expense_date' => now()->toDateString(),
             'description' => 'Main branch water',
             'amount' => 12,
+            'currency' => 'USD',
             'payment_method' => 'cash',
             'status' => 'paid',
         ])->assertRedirect()->assertSessionHasNoErrors();
@@ -169,6 +173,7 @@ class ExpenseAndReportExportTest extends TestCase
             'expense_date' => now()->toDateString(),
             'description' => '=1+1',
             'amount' => 2,
+            'currency' => 'AFN',
             'payment_method' => 'cash',
             'status' => 'unpaid',
         ]);
@@ -209,6 +214,8 @@ class ExpenseAndReportExportTest extends TestCase
             ->assertDownload('expenses-report.csv')
             ->streamedContent();
         $this->assertStringContainsString("'=1+1", $expenseCsv);
+        $this->assertStringContainsString('Currency', $expenseCsv);
+        $this->assertStringContainsString('AFN', $expenseCsv);
 
         $inventoryExcel = $this->get(route('reports.inventory.export', ['format' => 'xls'] + $filters))
             ->assertDownload('inventory-current.xls')
@@ -222,6 +229,85 @@ class ExpenseAndReportExportTest extends TestCase
         $this->get(route('reports.inventory'))->assertOk();
         $this->get(route('purchases.show', $purchase))->assertOk()->assertSee('Payment History');
         $this->get(route('suppliers.index'))->assertOk()->assertSee('Outstanding Balance');
+    }
+
+    public function test_expense_currency_is_persisted_and_totals_and_trends_are_separate(): void
+    {
+        $expenseDate = now()->toDateString();
+
+        $this->actingAs($this->mainManager)->post(route('expenses.store'), [
+            'expense_date' => $expenseDate,
+            'description' => 'Afghani office rent',
+            'amount' => 1000,
+            'currency' => 'AFN',
+            'payment_method' => 'bank',
+            'status' => 'paid',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->post(route('expenses.store'), [
+            'expense_date' => $expenseDate,
+            'description' => 'USD software subscription',
+            'amount' => 25.50,
+            'currency' => 'USD',
+            'payment_method' => 'card',
+            'status' => 'unpaid',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('expenses', [
+            'description' => 'Afghani office rent',
+            'amount' => 1000,
+            'currency' => 'AFN',
+        ]);
+        $this->assertDatabaseHas('expenses', [
+            'description' => 'USD software subscription',
+            'amount' => 25.50,
+            'currency' => 'USD',
+        ]);
+
+        $this->get(route('expenses.index', ['from' => $expenseDate, 'to' => $expenseDate]))
+            ->assertOk()
+            ->assertSee('؋1,000.00')
+            ->assertSee('$25.50')
+            ->assertSee('data-expense-currency="AFN"', false)
+            ->assertSee('data-expense-currency="USD"', false)
+            ->assertSee('Weekly expenses — AFN', false);
+
+        $expense = Expense::where('description', 'USD software subscription')->firstOrFail();
+        $this->put(route('expenses.update', $expense), [
+            'expense_date' => $expenseDate,
+            'description' => $expense->description,
+            'amount' => 30,
+            'currency' => 'AFN',
+            'payment_method' => 'card',
+            'status' => 'paid',
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('expenses', [
+            'id' => $expense->id,
+            'amount' => 30,
+            'currency' => 'AFN',
+        ]);
+    }
+
+    public function test_expense_trend_query_does_not_inherit_list_ordering_or_pagination(): void
+    {
+        $trendQueries = [];
+        DB::listen(function (QueryExecuted $query) use (&$trendQueries): void {
+            if (str_contains($query->sql, 'expense_date, SUM(amount) as amount')) {
+                $trendQueries[] = $query->sql;
+            }
+        });
+
+        $this->actingAs($this->mainManager)
+            ->get(route('expenses.index'))
+            ->assertOk();
+
+        $this->assertNotEmpty($trendQueries);
+        $trendQuery = strtolower(end($trendQueries));
+        $this->assertStringNotContainsString('limit', $trendQuery);
+        preg_match('/order by (.*)$/', $trendQuery, $orderBy);
+        $this->assertArrayHasKey(1, $orderBy);
+        $this->assertStringNotContainsString('id', $orderBy[1]);
     }
 
     private function createSale(Branch $branch, User $cashier, string $invoice, Product $product): Sale

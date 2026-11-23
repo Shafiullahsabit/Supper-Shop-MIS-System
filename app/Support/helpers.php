@@ -13,9 +13,13 @@ if (! function_exists('money')) {
     /**
      * Format a numeric value as currency using shop settings.
      */
-    function money($amount): string
+    function money($amount, ?string $currency = null): string
     {
-        $symbol = Setting::get('currency_symbol', '$');
+        $symbol = match ($currency) {
+            'AFN' => '؋',
+            'USD' => '$',
+            default => Setting::get('currency_symbol', '$'),
+        };
         $position = Setting::get('currency_position', 'before');
         $formatted = number_format((float) $amount, 2);
 

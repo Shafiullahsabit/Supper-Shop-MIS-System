@@ -1,20 +1,12 @@
 @extends('layouts.app')
 @section('title', 'Messages')
 @section('crumb', 'Internal team messages')
+@section('content-class', 'message-content')
 
 @section('content')
-<div class="chat-page-heading">
-    <div>
-        <h2>{{ __('Chats') }}</h2>
-        <p>{{ __('Private conversations and branch announcements.') }}</p>
-    </div>
-    <a class="btn btn-primary" href="{{ route('messages.compose') }}">
-        @include('partials.icon', ['name' => 'plus']) {{ __('New chat') }}
-    </a>
-</div>
-
 <div class="chat-layout" data-chat-inbox
      data-user-id="{{ auth()->id() }}"
+     data-messages-url="{{ url('/messages') }}"
      data-label-you="{{ __('You') }}"
      data-label-sent="{{ __('Sent') }}"
      data-label-seen="{{ __('Seen') }}"
@@ -23,11 +15,17 @@
      data-label-offline="{{ __('Reconnecting...') }}">
     <aside class="chat-sidebar">
         <div class="chat-sidebar-heading">
-            <h3>{{ __('Messages') }}</h3>
+            <div class="chat-sidebar-title-row">
+                <h3>{{ __('Chats') }}</h3>
+                <a class="icon-btn" href="{{ route('messages.compose') }}" aria-label="{{ __('New chat') }}" title="{{ __('New chat') }}">
+                    @include('partials.icon', ['name' => 'plus'])
+                </a>
+            </div>
             <label class="chat-search">
                 @include('partials.icon', ['name' => 'search'])
                 <input class="input" type="search" placeholder="{{ __('Search conversations') }}" data-chat-search>
             </label>
+            <span class="chat-connection-status" data-chat-connection role="status">{{ __('Connecting...') }}</span>
         </div>
         <div class="chat-thread-list" data-chat-list>
             @forelse($threads as $thread)

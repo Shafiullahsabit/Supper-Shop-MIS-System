@@ -36,6 +36,8 @@ class ProfileExperienceTest extends TestCase
                 ->assertSeeText($user->name)
                 ->assertSeeText(__('System version'))
                 ->assertSeeText('v'.config('app.version'))
+                ->assertSee('class="sidebar-profile', false)
+                ->assertSee('href="'.route('profile.edit').'"', false)
                 ->assertSee('logoutConfirmation')
                 ->assertSee(route('logout'), false);
         }

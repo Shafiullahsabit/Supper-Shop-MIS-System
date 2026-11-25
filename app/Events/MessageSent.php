@@ -13,11 +13,22 @@ class MessageSent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public Message $message) {}
+    public function __construct(
+        public Message $message,
+        public array $recipientIds,
+        public string $threadType,
+        public string $threadTitle,
+    ) {}
 
     public function broadcastOn(): array
     {
-        return [new PrivateChannel('messages.thread.'.$this->message->message_thread_id)];
+        return array_merge(
+            [new PrivateChannel('messages.thread.'.$this->message->message_thread_id)],
+            array_map(
+                fn (int $userId): PrivateChannel => new PrivateChannel('messages.user.'.$userId),
+                $this->recipientIds,
+            ),
+        );
     }
 
     public function broadcastAs(): string
@@ -34,6 +45,8 @@ class MessageSent implements ShouldBroadcast
             'sender_name' => $this->message->sender_name,
             'body' => $this->message->body,
             'created_at' => $this->message->created_at->toIso8601String(),
+            'thread_type' => $this->threadType,
+            'thread_title' => $this->threadTitle,
         ];
     }
 }

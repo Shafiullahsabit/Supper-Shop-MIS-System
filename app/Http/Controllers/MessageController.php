@@ -200,7 +200,13 @@ class MessageController extends Controller
 
             return $thread;
         });
-        $this->broadcast(new MessageSent($thread->latestMessage()->firstOrFail()));
+        $message = $thread->latestMessage()->firstOrFail();
+        $this->broadcast(new MessageSent(
+            $message,
+            array_map('intval', $recipients->pluck('id')->all()),
+            $thread->type,
+            $thread->type === 'announcement' ? $thread->subject : $message->sender_name,
+        ));
 
         return redirect()->route('messages.show', $thread)->with('success', __('Message sent.'));
     }
@@ -279,7 +285,12 @@ class MessageController extends Controller
 
             return $message;
         });
-        $this->broadcast(new MessageSent($message));
+        $this->broadcast(new MessageSent(
+            $message,
+            array_map('intval', $recipients->pluck('id')->all()),
+            $thread->type,
+            $thread->type === 'announcement' ? $thread->subject : $message->sender_name,
+        ));
 
         if ($request->expectsJson()) {
             return response()->json(['message' => $this->messagePayload($message)], 201);

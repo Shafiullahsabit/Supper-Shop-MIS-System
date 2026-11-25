@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Events\MessageSent;
 use App\Models\Branch;
+use App\Models\Message;
 use App\Models\MessageThread;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -65,6 +68,12 @@ class MessagingTest extends TestCase
         ])->assertRedirect();
 
         $thread = MessageThread::query()->latest('id')->firstOrFail();
+        $message = Message::query()->where('message_thread_id', $thread->id)->firstOrFail();
+        $event = new MessageSent($message, [(int) $recipient->id], 'direct', $sender->name);
+        $this->assertSame(
+            ['private-messages.thread.'.$thread->id, 'private-messages.user.'.$recipient->id],
+            array_map(fn (PrivateChannel $channel): string => $channel->name, $event->broadcastOn()),
+        );
         $this->assertSame($recipient->name, $thread->subject);
         $this->assertSame(1, DB::table('jobs')->count());
         $this->assertSame(2, $thread->participants()->count());
@@ -79,17 +88,30 @@ class MessagingTest extends TestCase
             'socket_id' => '123.456',
             'channel_name' => 'private-messages.thread.'.$thread->id,
         ])->assertForbidden();
+        $this->actingAs($recipient)->postJson('/broadcasting/auth', [
+            'socket_id' => '123.456',
+            'channel_name' => 'private-messages.user.'.$recipient->id,
+        ])->assertOk();
+        $this->actingAs($outsider)->postJson('/broadcasting/auth', [
+            'socket_id' => '123.456',
+            'channel_name' => 'private-messages.user.'.$recipient->id,
+        ])->assertForbidden();
 
         $this->actingAs($recipient)
             ->get(route('messages.index'))
             ->assertOk()
             ->assertSeeText($sender->name)
+            ->assertSee('class="content message-content"', false)
+            ->assertSee('data-chat-inbox', false)
+            ->assertSee('data-chat-connection', false)
             ->assertSee('aria-label="Messages"', false)
             ->assertSee('class="message-shortcut-count">1</span>', false);
 
         $this->actingAs($recipient)
             ->get(route('messages.show', $thread))
             ->assertOk()
+            ->assertSee('class="content message-content"', false)
+            ->assertSee('data-chat-conversation', false)
             ->assertSeeText($sender->name)
             ->assertSeeText('Please check aisle 3.')
             ->assertSeeText('Thanks.');

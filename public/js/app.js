@@ -1,5 +1,6 @@
 /* SuperShop admin helpers */
 const modalFocusReturn = new WeakMap();
+let pendingUserActionForm = null;
 
 window.SS = {
     openModal(id) {
@@ -22,10 +23,11 @@ window.SS = {
         const m = document.getElementById(id);
         if (!m) return;
         Object.entries(data).forEach(([k, v]) => {
-            const f = m.querySelector('[name="' + k + '"]');
+            const fields = m.querySelectorAll('[name="' + k + '"]');
+            const f = Array.from(fields).find(field => field.type === 'checkbox') || fields[0];
             if (!f) return;
-            if (f.type === 'checkbox') f.checked = !!(+v);
-            else f.value = v;
+            if (f.type === 'checkbox') f.checked = v === true || v === 1 || v === '1' || v === 'on';
+            else f.value = v ?? '';
         });
         this.openModal(id);
     },
@@ -37,7 +39,52 @@ window.SS = {
 
 // Close modals on overlay click or Escape, and keep keyboard focus inside the active dialog.
 document.addEventListener('click', (e) => {
-    if (e.target.classList && e.target.classList.contains('modal-overlay')) window.SS.closeModal(e.target.id);
+    const editUser = e.target.closest('[data-edit-user]');
+    if (editUser) {
+        const form = document.getElementById('editUserForm');
+        if (form) {
+            form.action = editUser.dataset.action;
+            window.SS.edit('editUser', JSON.parse(editUser.dataset.user));
+        }
+    }
+
+    if (e.target.closest('[data-cancel-user-action]')) {
+        pendingUserActionForm = null;
+        window.SS.closeModal('userActionConfirmation');
+        return;
+    }
+
+    if (e.target.closest('[data-confirm-user-action]')) {
+        const form = pendingUserActionForm;
+        pendingUserActionForm = null;
+        window.SS.closeModal('userActionConfirmation');
+        if (form) form.submit();
+        return;
+    }
+
+    if (e.target.classList && e.target.classList.contains('modal-overlay')) {
+        if (e.target.id === 'userActionConfirmation') pendingUserActionForm = null;
+        window.SS.closeModal(e.target.id);
+    }
+});
+document.addEventListener('submit', (e) => {
+    const form = e.target.closest('form[data-user-action-confirm]');
+    if (!form) return;
+
+    e.preventDefault();
+    pendingUserActionForm = form;
+
+    const dialog = document.getElementById('userActionConfirmation');
+    const title = document.getElementById('userActionConfirmationTitle');
+    const message = document.getElementById('userActionConfirmationMessage');
+    const confirmButton = dialog.querySelector('[data-confirm-user-action]');
+
+    title.textContent = form.dataset.confirmTitle;
+    message.textContent = form.dataset.confirmMessage;
+    confirmButton.textContent = form.dataset.confirmLabel;
+    confirmButton.classList.toggle('btn-danger', form.dataset.confirmVariant === 'danger');
+    confirmButton.classList.toggle('btn-primary', form.dataset.confirmVariant !== 'danger');
+    window.SS.openModal('userActionConfirmation');
 });
 document.addEventListener('keydown', (e) => {
     const modals = Array.from(document.querySelectorAll('.modal-overlay')).filter(m => m.style.display !== 'none');
@@ -46,6 +93,7 @@ document.addEventListener('keydown', (e) => {
 
     if (e.key === 'Escape') {
         e.preventDefault();
+        if (modal.id === 'userActionConfirmation') pendingUserActionForm = null;
         window.SS.closeModal(modal.id);
         return;
     }

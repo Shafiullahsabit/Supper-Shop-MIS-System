@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Messages')
 @section('crumb', $thread->type === 'announcement' ? $thread->subject : $thread->participants->where('id', '!=', auth()->id())->pluck('name')->join(', '))
+@section('content-class', 'message-content')
 
 @section('content')
 @php
@@ -15,7 +16,7 @@
      data-chat-conversation
      data-thread-id="{{ $thread->id }}"
      data-user-id="{{ auth()->id() }}"
-     data-user-id="{{ auth()->id() }}"
+     data-messages-url="{{ url('/messages') }}"
      data-thread-type="{{ $thread->type }}"
      data-read-url="{{ route('messages.read', $thread) }}"
      data-reply-url="{{ route('messages.reply', $thread) }}"

@@ -40,9 +40,25 @@
                     <td>@if($usr->is_active)<span class="badge badge-green"><span class="dot"></span> {{ __('Active') }}</span>@else<span class="badge badge-red"><span class="dot"></span> {{ __('Disabled') }}</span>@endif</td>
                     <td>
                         <div class="flex gap-1" style="justify-content:flex-end">
-                            <button class="icon-btn" onclick='SS.edit("editUser",{{ Illuminate\Support\Js::from($editData) }}); document.getElementById("editUserForm").action="{{ route('users.update',$usr) }}"'>@include('partials.icon',['name'=>'edit'])</button>
+                            <button
+                                type="button"
+                                class="icon-btn"
+                                data-edit-user
+                                data-user="{{ Illuminate\Support\Js::encode($editData) }}"
+                                data-action="{{ route('users.update', $usr) }}"
+                                aria-label="{{ __('Edit User') }}"
+                                title="{{ __('Edit User') }}"
+                            >@include('partials.icon',['name'=>'edit'])</button>
                             @if($usr->id !== auth()->id())
-                            <form method="POST" action="{{ route('users.destroy',$usr) }}" onsubmit="return SS.confirmSubmit(this,'Delete {{ addslashes($usr->name) }}?')">@csrf @method('DELETE')<button class="icon-btn danger">@include('partials.icon',['name'=>'trash'])</button></form>
+                            <form
+                                method="POST"
+                                action="{{ route('users.destroy', $usr) }}"
+                                data-user-action-confirm
+                                data-confirm-title="{{ __('Confirm user deletion') }}"
+                                data-confirm-message="{{ __('Are you sure you want to delete this user? This action cannot be undone.') }}"
+                                data-confirm-label="{{ __('Delete') }}"
+                                data-confirm-variant="danger"
+                            >@csrf @method('DELETE')<button type="submit" class="icon-btn danger" aria-label="{{ __('Delete User') }}" title="{{ __('Delete User') }}">@include('partials.icon',['name'=>'trash'])</button></form>
                             @endif
                         </div>
                     </td>
@@ -76,7 +92,16 @@
 
 {{-- Edit --}}
 <div class="modal-overlay" id="editUser" style="display:none">
-    <form class="modal" method="POST" id="editUserForm">
+    <form
+        class="modal"
+        method="POST"
+        id="editUserForm"
+        data-user-action-confirm
+        data-confirm-title="{{ __('Confirm user changes') }}"
+        data-confirm-message="{{ __('Are you sure you want to save changes to this user?') }}"
+        data-confirm-label="{{ __('Save changes') }}"
+        data-confirm-variant="primary"
+    >
         @csrf @method('PUT')
         <div class="modal-head"><h3>{{ __('Edit User') }}</h3><button type="button" class="icon-btn" style="margin-inline-start:auto" onclick="SS.closeModal('editUser')">@include('partials.icon',['name'=>'x'])</button></div>
         <div class="modal-body">
@@ -92,5 +117,17 @@
         </div>
         <div class="modal-foot"><button type="button" class="btn btn-light" onclick="SS.closeModal('editUser')">{{ __('Cancel') }}</button><button class="btn btn-primary">{{ __('Update User') }}</button></div>
     </form>
+</div>
+
+<div class="modal-overlay" id="userActionConfirmation" style="display:none">
+    <section class="modal user-action-confirmation" role="alertdialog" aria-modal="true" aria-labelledby="userActionConfirmationTitle" aria-describedby="userActionConfirmationMessage">
+        <div class="user-action-confirmation-icon">@include('partials.icon', ['name' => 'alert'])</div>
+        <h2 id="userActionConfirmationTitle">{{ __('Confirm') }}</h2>
+        <p id="userActionConfirmationMessage">{{ __('Are you sure?') }}</p>
+        <div class="user-action-confirmation-actions">
+            <button type="button" class="btn btn-light" data-cancel-user-action>{{ __('Cancel') }}</button>
+            <button type="button" class="btn btn-primary" data-confirm-user-action>{{ __('Confirm') }}</button>
+        </div>
+    </section>
 </div>
 @endsection

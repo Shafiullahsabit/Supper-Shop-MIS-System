@@ -15,10 +15,11 @@ const chatRoot = conversation || inbox;
 if (chatRoot && window.Echo) {
     const currentUserId = Number(chatRoot.dataset.userId);
     const subscribedThreads = new Set();
+    const handledMessageIds = new Set();
     const messageList = conversation?.querySelector('[data-message-list]');
 
     const updateConnection = (state) => {
-        const status = conversation?.querySelector('[data-chat-connection]');
+        const status = chatRoot.querySelector('[data-chat-connection]');
         if (!status) return;
         status.textContent = chatRoot.dataset[`label${state}`] || state;
         status.dataset.state = state.toLowerCase();
@@ -45,8 +46,97 @@ if (chatRoot && window.Echo) {
         });
     };
 
+    const updateMessageBadges = (change) => {
+        const navigation = [
+            document.querySelector('.message-shortcut'),
+            [...document.querySelectorAll('.nav-link')].find((link) => link.href.endsWith('/messages')),
+        ];
+
+        navigation.forEach((link) => {
+            if (!link) return;
+            let badge = link.querySelector('.message-shortcut-count, .nav-badge');
+            const count = Math.max(0, (Number.parseInt(badge?.textContent || '0', 10) || 0) + change);
+            if (count === 0) {
+                badge?.remove();
+                return;
+            }
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = link.classList.contains('message-shortcut')
+                    ? 'message-shortcut-count'
+                    : 'nav-badge';
+                link.append(badge);
+            }
+            badge.textContent = count > 99 ? '99+' : String(count);
+        });
+    };
+
+    const createThreadRow = (message) => {
+        const list = chatRoot.querySelector('[data-chat-list]');
+        if (!list) return null;
+
+        const threadId = String(message.thread_id);
+        const threadName = message.thread_type === 'announcement'
+            ? message.thread_title
+            : message.sender_name;
+        const row = document.createElement('a');
+        row.className = 'chat-thread-row';
+        row.href = `${chatRoot.dataset.messagesUrl}/${encodeURIComponent(threadId)}`;
+        row.dataset.threadRow = '';
+        row.dataset.threadId = threadId;
+        row.dataset.threadUrl = row.href;
+        row.dataset.threadName = threadName;
+        row.dataset.lastMessageTime = message.created_at;
+        row.setAttribute('aria-current', 'false');
+
+        const avatar = document.createElement('span');
+        avatar.className = `chat-avatar${message.thread_type === 'announcement' ? ' is-announcement' : ''}`;
+        avatar.textContent = Array.from(threadName || '?')[0].toLocaleUpperCase();
+
+        const details = document.createElement('span');
+        details.className = 'chat-thread-details';
+        const topLine = document.createElement('span');
+        topLine.className = 'chat-thread-topline';
+        const title = document.createElement('strong');
+        title.dataset.threadTitle = '';
+        title.textContent = threadName;
+        const time = document.createElement('time');
+        time.dataset.threadTime = '';
+        time.textContent = formatTime(new Date(message.created_at));
+        topLine.append(title, time);
+
+        const bottomLine = document.createElement('span');
+        bottomLine.className = 'chat-thread-bottomline';
+        const preview = document.createElement('span');
+        preview.className = 'chat-thread-preview';
+        preview.dataset.threadPreview = '';
+        const unread = document.createElement('span');
+        unread.className = 'chat-unread-count';
+        unread.dataset.threadUnread = '';
+        unread.hidden = true;
+        bottomLine.append(preview, unread);
+        details.append(topLine, bottomLine);
+        row.append(avatar, details);
+        list.querySelector('.chat-list-empty')?.remove();
+        list.prepend(row);
+
+        return row;
+    };
+
+    const changeThreadUnread = (row, nextCount) => {
+        const badge = row?.querySelector('[data-thread-unread]');
+        if (!badge) return;
+
+        const previousCount = Number(badge.textContent) || 0;
+        const count = Math.max(0, nextCount);
+        badge.textContent = String(count);
+        badge.hidden = count === 0;
+        updateMessageBadges(count - previousCount);
+    };
+
     const updateThreadRow = (message) => {
-        const row = document.querySelector(`[data-thread-row][data-thread-id="${message.thread_id}"]`);
+        let row = chatRoot.querySelector(`[data-thread-row][data-thread-id="${message.thread_id}"]`);
+        if (!row) row = createThreadRow(message);
         if (!row) return;
 
         const preview = row.querySelector('[data-thread-preview]');
@@ -63,8 +153,7 @@ if (chatRoot && window.Echo) {
         if (Number(message.sender_id) !== currentUserId && row.getAttribute('aria-current') !== 'page') {
             const badge = row.querySelector('[data-thread-unread]');
             if (badge) {
-                badge.hidden = false;
-                badge.textContent = String((Number(badge.textContent) || 0) + 1);
+                changeThreadUnread(row, (Number(badge.textContent) || 0) + 1);
             }
             incrementNotificationBadges();
         }
@@ -133,6 +222,8 @@ if (chatRoot && window.Echo) {
         });
 
         if (!response.ok) throw new Error('Could not update the read receipt.');
+        const row = chatRoot.querySelector(`[data-thread-row][data-thread-id="${conversation.dataset.threadId}"]`);
+        changeThreadUnread(row, 0);
     };
 
     const updateReadReceipt = (event) => {
@@ -147,6 +238,13 @@ if (chatRoot && window.Echo) {
     };
 
     const handleMessage = (message) => {
+        const messageId = String(message.id);
+        if (handledMessageIds.has(messageId)) return;
+        handledMessageIds.add(messageId);
+        if (handledMessageIds.size > 300) {
+            handledMessageIds.delete(handledMessageIds.values().next().value);
+        }
+
         updateThreadRow(message);
         if (!conversation || Number(message.thread_id) !== Number(conversation.dataset.threadId)) return;
 
@@ -165,6 +263,9 @@ if (chatRoot && window.Echo) {
             .listen('.message.sent', handleMessage)
             .listen('.message.read', updateReadReceipt);
     });
+
+    window.Echo.private(`messages.user.${currentUserId}`)
+        .listen('.message.sent', handleMessage);
 
     const search = document.querySelector('[data-chat-search]');
     search?.addEventListener('input', () => {
@@ -231,10 +332,11 @@ if (chatRoot && window.Echo) {
             });
         }
 
-        const pusherConnection = window.Echo.connector.pusher.connection;
-        pusherConnection.bind('connected', () => updateConnection('Live'));
-        pusherConnection.bind('connecting', () => updateConnection('Connecting'));
-        pusherConnection.bind('unavailable', () => updateConnection('Offline'));
-        pusherConnection.bind('disconnected', () => updateConnection('Offline'));
     }
+
+    const pusherConnection = window.Echo.connector.pusher.connection;
+    pusherConnection.bind('connected', () => updateConnection('Live'));
+    pusherConnection.bind('connecting', () => updateConnection('Connecting'));
+    pusherConnection.bind('unavailable', () => updateConnection('Offline'));
+    pusherConnection.bind('disconnected', () => updateConnection('Offline'));
 }

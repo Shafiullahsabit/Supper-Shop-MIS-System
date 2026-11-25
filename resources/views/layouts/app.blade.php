@@ -102,6 +102,13 @@
                 {!! $link('activity.index', 'activity', 'Activity Log', 'activity.view') !!}
             @endif
         </nav>
+        <a class="sidebar-profile{{ request()->routeIs('profile.*') ? ' active' : '' }}" href="{{ route('profile.edit') }}" aria-label="{{ __('My Profile') }}: {{ $u->name }}">
+            @include('partials.user-avatar', ['user' => $u, 'class' => 'sidebar-profile-avatar'])
+            <span class="sidebar-profile-copy">
+                <span class="sidebar-profile-name">{{ $u->name }}</span>
+                <span class="sidebar-profile-label">{{ __('My Profile') }}</span>
+            </span>
+        </a>
     </aside>
 
     <div class="main">
@@ -163,7 +170,7 @@
             </div>
         </header>
 
-        <main class="content">
+        <main class="content @yield('content-class')">
             @if(session('success'))
                 <div class="alert alert-success">@include('partials.icon', ['name' => 'check-circle']) {{ session('success') }}</div>
             @endif

@@ -39,6 +39,10 @@ class LocaleTest extends TestCase
         $this->assertNotSame('New message from :name', Lang::get('New message from :name', ['name' => 'Amina'], 'ps'));
         $this->assertNotSame('Expense trend', Lang::get('Expense trend', [], 'prs'));
         $this->assertNotSame('Expense trend', Lang::get('Expense trend', [], 'ps'));
+        $this->assertNotSame('Confirm user changes', Lang::get('Confirm user changes', [], 'prs'));
+        $this->assertNotSame('Confirm user changes', Lang::get('Confirm user changes', [], 'ps'));
+        $this->assertNotSame('Confirm user deletion', Lang::get('Confirm user deletion', [], 'prs'));
+        $this->assertNotSame('Confirm user deletion', Lang::get('Confirm user deletion', [], 'ps'));
         $this->assertNotSame('Low stock alert', Lang::get('Low stock alert', [], 'prs'));
         $this->assertNotSame('Low stock alert', Lang::get('Low stock alert', [], 'ps'));
         $this->assertNotSame(

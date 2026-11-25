@@ -18,6 +18,8 @@ class MessageSent implements ShouldBroadcast
         public array $recipientIds,
         public string $threadType,
         public string $threadTitle,
+        public string $senderRole,
+        public int $senderBranchId,
     ) {}
 
     public function broadcastOn(): array
@@ -47,6 +49,8 @@ class MessageSent implements ShouldBroadcast
             'created_at' => $this->message->created_at->toIso8601String(),
             'thread_type' => $this->threadType,
             'thread_title' => $this->threadTitle,
+            'sender_role' => $this->senderRole,
+            'sender_branch_id' => $this->senderBranchId,
         ];
     }
 }

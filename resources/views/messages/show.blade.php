@@ -10,12 +10,14 @@
         ? $thread->subject
         : $otherParticipants->pluck('name')->join(', ');
     $counterpart = $otherParticipants->first();
+    $presenceBranches = $threads->flatMap(fn ($chatThread) => $chatThread->participants->pluck('branch_id'))->filter()->unique();
 @endphp
 
 <div class="chat-layout chat-layout-active"
      data-chat-conversation
      data-thread-id="{{ $thread->id }}"
      data-user-id="{{ auth()->id() }}"
+     data-presence-branches="{{ $presenceBranches->implode(',') }}"
      data-messages-url="{{ url('/messages') }}"
      data-thread-type="{{ $thread->type }}"
      data-read-url="{{ route('messages.read', $thread) }}"
@@ -64,7 +66,13 @@
             </span>
             <div class="chat-conversation-identity">
                 <strong>{{ $conversationTitle }}</strong>
-                <span>{{ $thread->type === 'announcement' ? __('Branch announcement') : ($counterpart?->role_name ?? __('Direct message')) }}</span>
+                <span class="chat-conversation-role">{{ $thread->type === 'announcement' ? __('Branch announcement') : __($counterpart?->role_name ?? 'Direct message') }}</span>
+                @if($thread->type === 'direct' && $counterpart)
+                    <span class="chat-user-presence" data-presence-user-id="{{ $counterpart->id }}" data-label-online="{{ __('Online') }}" data-label-offline="{{ __('Offline') }}" data-state="offline" role="status">
+                        <span class="chat-presence-dot"></span>
+                        <span data-presence-label>{{ __('Offline') }}</span>
+                    </span>
+                @endif
             </div>
             <span class="chat-connection-status" data-chat-connection role="status">{{ __('Connecting...') }}</span>
         </header>
@@ -83,7 +91,10 @@
                          data-sender-id="{{ $message->sender_id }}"
                          data-created-at="{{ $message->created_at->toIso8601String() }}">
                     @unless($isOwnMessage)
-                        <strong class="chat-message-sender">{{ $message->sender_name }}</strong>
+                        <div class="chat-message-author">
+                            <strong class="chat-message-sender">{{ $message->sender_name }}</strong>
+                            <span class="chat-message-sender-role">{{ __($message->sender?->role_name ?? 'User') }}</span>
+                        </div>
                     @endunless
                     <p class="chat-message-body">{{ $message->body }}</p>
                     <div class="chat-message-meta">
@@ -112,7 +123,3 @@
     </section>
 </div>
 @endsection
-
-@push('scripts')
-    @vite('resources/js/app.js')
-@endpush

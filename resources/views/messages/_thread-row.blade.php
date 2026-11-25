@@ -3,6 +3,7 @@
     $threadName = $thread->type === 'announcement'
         ? $thread->subject
         : $otherParticipants->pluck('name')->join(', ');
+    $counterpart = $thread->type === 'direct' ? $otherParticipants->first() : null;
     $latestMessage = $thread->latestMessage;
     $previewSender = $latestMessage && (int) $latestMessage->sender_id === (int) $currentUserId
         ? __('You')
@@ -32,6 +33,15 @@
             <strong data-thread-title>{{ $threadName }}</strong>
             <time data-thread-time>{{ $latestMessage?->created_at?->translatedFormat('h:i A') }}</time>
         </span>
+        @if($counterpart)
+            <span class="chat-thread-meta">
+                <span class="chat-thread-role" data-thread-role>{{ __($counterpart->role_name) }}</span>
+                <span class="chat-user-presence" data-presence-user-id="{{ $counterpart->id }}" data-label-online="{{ __('Online') }}" data-label-offline="{{ __('Offline') }}" data-state="offline" role="status">
+                    <span class="chat-presence-dot"></span>
+                    <span data-presence-label>{{ __('Offline') }}</span>
+                </span>
+            </span>
+        @endif
         <span class="chat-thread-bottomline">
             <span class="chat-thread-preview" data-thread-preview>{{ \Illuminate\Support\Str::limit($preview, 62) }}</span>
             <span class="chat-unread-count" data-thread-unread @if($unreadCount === 0) hidden @endif>{{ $unreadCount }}</span>

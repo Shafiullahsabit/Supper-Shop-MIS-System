@@ -339,4 +339,43 @@ if (chatRoot && window.Echo) {
     pusherConnection.bind('connecting', () => updateConnection('Connecting'));
     pusherConnection.bind('unavailable', () => updateConnection('Offline'));
     pusherConnection.bind('disconnected', () => updateConnection('Offline'));
+
+    const presenceEls = new Map();
+    document.querySelectorAll('[data-presence-user-id]').forEach((el) => {
+        presenceEls.set(Number(el.dataset.presenceUserId), el);
+    });
+
+    const updatePresence = (userId, state) => {
+        const el = presenceEls.get(Number(userId));
+        if (!el) return;
+        const label = el.querySelector('[data-presence-label]');
+        const dot = el.querySelector('.chat-presence-dot');
+        el.dataset.state = state;
+        if (label) {
+            label.textContent = state === 'online'
+                ? (el.dataset.labelOnline || 'Online')
+                : (el.dataset.labelOffline || 'Offline');
+        }
+        if (dot) {
+            dot.classList.toggle('is-online', state === 'online');
+        }
+    };
+
+    const branches = (chatRoot.dataset.presenceBranches || '')
+        .split(',')
+        .map((b) => b.trim())
+        .filter(Boolean)
+        .filter((b) => b !== '0');
+
+    branches.forEach((branchId) => {
+        window.Echo.join(`messages.online.${branchId}`)
+            .here((users) => {
+                users.forEach((user) => updatePresence(user.id, 'online'));
+            })
+            .joining((user) => updatePresence(user.id, 'online'))
+            .leaving((user) => updatePresence(user.id, 'offline'))
+            .catch((error) => {
+                console.warn('Presence channel unavailable:', error);
+            });
+    });
 }

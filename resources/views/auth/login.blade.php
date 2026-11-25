@@ -175,20 +175,9 @@
                     {{ __('Sign in') }} @include('partials.icon',['name'=>'arrow-left','class'=>''])
                 </button>
             </form>
-
-            <div class="demo-creds">
-                <div style="margin-bottom:6px"><b>{{ __('Demo accounts') }}</b> · {{ __('password') }}: <code onclick="fill(this)">password</code></div>
-                <div class="row"><span>Admin</span> <code onclick="fillEmail('admin@supershop.test')">admin@supershop.test</code></div>
-                <div class="row"><span>Manager</span> <code onclick="fillEmail('manager@supershop.test')">manager@supershop.test</code></div>
-                <div class="row"><span>Cashier</span> <code onclick="fillEmail('cashier@supershop.test')">cashier@supershop.test</code></div>
-            </div>
         </div>
         <div class="login-footer">© {{ date('Y') }} {{ setting('shop_name','SuperShop') }}. {{ __('All rights reserved.') }}</div>
     </div>
 </div>
-<script>
-    function fillEmail(e){ document.getElementById('email').value=e; document.getElementById('password').value='password'; document.getElementById('password').focus(); }
-    function fill(){ document.getElementById('password').value='password'; }
-</script>
 </body>
 </html>

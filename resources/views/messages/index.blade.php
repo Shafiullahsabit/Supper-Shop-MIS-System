@@ -4,8 +4,12 @@
 @section('content-class', 'message-content')
 
 @section('content')
+@php
+    $presenceBranches = $threads->flatMap(fn ($thread) => $thread->participants->pluck('branch_id'))->filter()->unique();
+@endphp
 <div class="chat-layout" data-chat-inbox
      data-user-id="{{ auth()->id() }}"
+     data-presence-branches="{{ $presenceBranches->implode(',') }}"
      data-messages-url="{{ url('/messages') }}"
      data-label-you="{{ __('You') }}"
      data-label-sent="{{ __('Sent') }}"
@@ -49,7 +53,3 @@
     </section>
 </div>
 @endsection
-
-@push('scripts')
-    @vite('resources/js/app.js')
-@endpush

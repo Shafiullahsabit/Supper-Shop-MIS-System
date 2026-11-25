@@ -31,7 +31,12 @@
         })
         ->count();
 @endphp
-<div class="app">
+<div
+    class="app"
+    data-presence-root
+    data-presence-branches="{{ $u->branch_id }}"
+    data-role-labels="{{ json_encode(['Admin' => __('Admin'), 'Super Admin' => __('Super Admin'), 'Manager' => __('Manager'), 'Cashier' => __('Cashier'), 'User' => __('User')], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) }}"
+>
     <aside class="sidebar" id="sidebar">
         <div class="brand">
             <div class="brand-mark">S</div>
@@ -207,6 +212,7 @@
     </section>
 </div>
 <script src="{{ asset('js/app.js') }}"></script>
+@vite('resources/js/app.js')
 @stack('scripts')
 </body>
 </html>

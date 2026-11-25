@@ -30,7 +30,7 @@ class MessageController extends Controller
         $userId = (int) $request->user()->id;
         $threads = MessageThread::query()
             ->whereHas('participants', fn ($query) => $query->where('users.id', $userId))
-            ->with(['participants:id,name', 'latestMessage'])
+            ->with(['participants:id,name,branch_id', 'participants.roles:id,name', 'latestMessage'])
             ->withMax('messages', 'created_at')
             ->withCount('participants')
             ->orderByDesc('messages_max_created_at')
@@ -206,6 +206,8 @@ class MessageController extends Controller
             array_map('intval', $recipients->pluck('id')->all()),
             $thread->type,
             $thread->type === 'announcement' ? $thread->subject : $message->sender_name,
+            $sender->role_name,
+            (int) $sender->branch_id,
         ));
 
         return redirect()->route('messages.show', $thread)->with('success', __('Message sent.'));
@@ -217,10 +219,14 @@ class MessageController extends Controller
         $thread = $this->visibleThread($user, $threadId);
         $this->markThreadRead($thread, $user);
 
-        $thread->load(['participants:id,name,branch_id', 'messages']);
+        $thread->load([
+            'participants:id,name,branch_id',
+            'participants.roles:id,name',
+            'messages.sender.roles:id,name',
+        ]);
         $threads = MessageThread::query()
             ->whereHas('participants', fn ($query) => $query->where('users.id', $user->id))
-            ->with(['participants:id,name', 'latestMessage'])
+            ->with(['participants:id,name,branch_id', 'participants.roles:id,name', 'latestMessage'])
             ->withMax('messages', 'created_at')
             ->withCount('participants')
             ->orderByDesc('messages_max_created_at')
@@ -230,7 +236,7 @@ class MessageController extends Controller
         if (! $threads->contains(fn (MessageThread $candidate): bool => (int) $candidate->id === $threadId)) {
             $threads->push(MessageThread::query()
                 ->whereKey($threadId)
-                ->with(['participants:id,name', 'latestMessage'])
+                ->with(['participants:id,name,branch_id', 'participants.roles:id,name', 'latestMessage'])
                 ->withMax('messages', 'created_at')
                 ->withCount('participants')
                 ->firstOrFail());
@@ -290,6 +296,8 @@ class MessageController extends Controller
             array_map('intval', $recipients->pluck('id')->all()),
             $thread->type,
             $thread->type === 'announcement' ? $thread->subject : $message->sender_name,
+            $sender->role_name,
+            (int) $sender->branch_id,
         ));
 
         if ($request->expectsJson()) {
@@ -383,6 +391,8 @@ class MessageController extends Controller
             'thread_id' => $message->message_thread_id,
             'sender_id' => $message->sender_id,
             'sender_name' => $message->sender_name,
+            'sender_role' => $message->sender?->role_name ?? 'User',
+            'sender_branch_id' => (int) ($message->sender?->branch_id ?? 0),
             'body' => $message->body,
             'created_at' => $message->created_at->toIso8601String(),
         ];
